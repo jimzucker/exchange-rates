@@ -87,3 +87,11 @@ The detail panel is open by default; collapsing it is remembered per browser. Ap
 
 Re-run `fetch-data.js` whenever you want a fresher offline snapshot; the live fetch
 means day-to-day staleness only affects the artifact build and offline use.
+
+`.github/workflows/refresh-rates.yml` does this automatically every Monday, committing
+only when the numbers actually move. Run it on demand from the Actions tab, or with
+`gh workflow run refresh-rates.yml`.
+
+Note that the workflow refreshes **rates only**. The central bank policy table that
+seeds the APY default lives in `scripts/fetch-data.js` as a hand-maintained constant
+with an `as of` date — there is no free keyless feed for it, so it needs a human.

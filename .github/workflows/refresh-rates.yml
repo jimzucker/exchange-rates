@@ -1,0 +1,43 @@
+name: Refresh rate snapshot
+
+# The live page fetches rates in the browser, so this only keeps the offline
+# fallback — and the Claude Artifact build, where CSP blocks that fetch — current.
+on:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-rates
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20" # global fetch(), no dependencies to install
+
+      - name: Pull fresh rates and rebuild
+        run: |
+          node scripts/fetch-data.js
+          node build.js
+
+      - name: Commit if anything changed
+        run: |
+          if git diff --quiet -- src/data.json index.html dist/artifact.html; then
+            echo "Rates unchanged — nothing to commit."
+            exit 0
+          fi
+          asof=$(node -p "require('./src/data.json').ratesAsOf")
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data.json index.html dist/artifact.html
+          git commit -m "Refresh rate snapshot ($asof)"
+          git push
