@@ -82,7 +82,8 @@ node build.js                # -> index.html and dist/artifact.html
 - `index.html` — standalone page for GitHub Pages. Generated; don't edit.
 - `dist/artifact.html` — body fragment for publishing as a Claude Artifact. Generated.
 
-Append `#details` to the URL to open the detail panel on load.
+The detail panel is open by default; collapsing it is remembered per browser. Append
+`#simple` to the URL to force it closed on load, or `#details` to force it open.
 
 Re-run `fetch-data.js` whenever you want a fresher offline snapshot; the live fetch
 means day-to-day staleness only affects the artifact build and offline use.

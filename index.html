@@ -445,11 +445,11 @@
     <p class="verdict-swing" id="verdictSwing"></p>
   </section>
 
-  <button type="button" class="disclose" id="disclose" aria-expanded="false" aria-controls="details">
-    Show the details
+  <button type="button" class="disclose" id="disclose" aria-expanded="true" aria-controls="details">
+    Hide the details
   </button>
 
-  <div id="details" hidden>
+  <div id="details">
 
     <section class="stats">
       <div class="tile">
@@ -600,7 +600,7 @@
   var ratesLive = false;
 
   var $ = function (id) { return document.getElementById(id); };
-  var state = { dest: "JP", home: "USD", amountIn: "local", rateTouched: false, apyTouched: false, volTouched: false };
+  var state = { dest: "JP", home: "USD", amountIn: "local", rateTouched: false, apyTouched: false, volTouched: false, detailsOpen: true };
 
   var els = {
     dest: $("dest"), home: $("home"), amount: $("amount"), payDate: $("payDate"),
@@ -1252,6 +1252,7 @@
   $("reset").addEventListener("click", function () { applyDefaults(); update(); });
 
   function setDetails(open) {
+    state.detailsOpen = open;
     $("details").hidden = !open;
     var b = $("disclose");
     b.setAttribute("aria-expanded", String(open));
@@ -1259,13 +1260,16 @@
     update();
   }
   $("disclose").addEventListener("click", function () { setDetails($("details").hidden); });
-  if (location.hash === "#details") setDetails(true);
+
+  // Open by default; a collapse is remembered. #details / #simple force either way.
+  if (location.hash === "#details") state.detailsOpen = true;
+  else if (location.hash === "#simple") state.detailsOpen = false;
 
   window.addEventListener("resize", function () {
     if (chartState && chartState.m && !$("details").hidden) renderChart(chartState.m);
   });
 
-  update();
+  setDetails(state.detailsOpen); // also does the first update()
   refreshRates();
 })();
 </script>
