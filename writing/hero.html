@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  *,*::before,*::after { box-sizing: border-box; }
+  :root {
+    --page:#0b0d11; --surface:#14171d; --ink:#eef1f6; --ink-2:#a6aebc; --muted:#6f7887;
+    --hairline:#242932; --rule:#39404c;
+    --pre:#4f97ee; --wait:#e66767;
+    --pre-fill:rgba(79,151,238,.20); --wait-fill:rgba(230,103,103,.20);
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  }
+  html, body { margin:0; padding:0; }
+  body {
+    width:1920px; height:1080px; overflow:hidden;
+    background:
+      radial-gradient(1200px 700px at 88% 18%, rgba(79,151,238,.10), transparent 62%),
+      radial-gradient(900px 600px at 12% 92%, rgba(230,103,103,.08), transparent 60%),
+      var(--page);
+    color:var(--ink); font-family:var(--sans);
+    display:grid; grid-template-columns: 780px 1fr; align-items:center;
+    gap:64px; padding:96px 104px;
+  }
+  .eyebrow {
+    font-family:var(--mono); font-size:22px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--muted); margin:0 0 34px;
+  }
+  h1 {
+    margin:0 0 40px; font-size:76px; line-height:1.02;
+    letter-spacing:-.032em; font-weight:660; text-wrap:balance;
+  }
+  h1 em { font-style:normal; color:var(--pre); }
+  .answer { display:flex; align-items:baseline; gap:26px; margin-bottom:18px; }
+  .big {
+    font-family:var(--mono); font-variant-numeric:tabular-nums;
+    font-size:132px; line-height:.9; letter-spacing:-.045em; color:var(--wait);
+  }
+  .answer .cap {
+    font-family:var(--mono); font-size:21px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted); max-width:250px; line-height:1.45;
+  }
+  .sub { font-size:27px; color:var(--ink-2); line-height:1.5; max-width:36ch; margin:0; }
+  .sub b { color:var(--ink); font-weight:620; }
+  .rule { height:1px; background:var(--rule); margin:44px 0 30px; }
+  .foot {
+    font-family:var(--mono); font-size:21px; color:var(--muted); letter-spacing:.06em;
+  }
+  .foot span { color:var(--ink-2); }
+  .panel {
+    background:var(--surface); border:1px solid var(--hairline);
+    border-radius:22px; padding:40px 44px 30px;
+    box-shadow:0 40px 90px rgba(0,0,0,.5);
+  }
+  .panel h2 {
+    margin:0 0 6px; font-size:25px; font-weight:620; letter-spacing:-.01em;
+  }
+  .panel p.note { margin:0 0 20px; font-size:19px; color:var(--muted); }
+  svg { display:block; width:100%; height:auto; }
+</style>
+</head>
+<body>
+  <div>
+    <p class="eyebrow">Prepay or wait &nbsp;·&nbsp; ¥ / $</p>
+    <h1>A friend asked me a question.<br>Two messages later, it was <em>a live app</em>.</h1>
+    <div class="answer">
+      <span class="big">2.05%</span>
+      <span class="cap">how far the yen must move before the answer flips</span>
+    </div>
+    <p class="sub">Prepaying earns card points now. Waiting keeps your money earning interest. <b>The rate decides the rest.</b></p>
+    <div class="rule"></div>
+    <p class="foot">245 destinations &nbsp;·&nbsp; 164 currencies &nbsp;·&nbsp; <span>live rates</span></p>
+  </div>
+
+  <div class="panel">
+    <h2>What you gain or lose by prepaying</h2>
+    <p class="note">Japan · ¥445,900 · paid mid-March instead of today</p>
+    <svg id="chart" viewBox="0 0 860 470" role="img" aria-label="Advantage of prepaying across a range of March exchange rates"></svg>
+  </div>
+
+<script>
+(function () {
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var W = 860, H = 470, PAD = { t: 26, r: 26, b: 62, l: 104 };
+
+  // The real case from the app: ¥445,900, ¥159.237/$1, 212 days, 3.63% APY, 2% rewards both sides.
+  var AMT = 445900, R0 = 159.237, DAYS = 212, APY = 0.0363, REW = 0.02;
+  var growth = Math.pow(1 + APY, DAYS / 365);
+  var prepay = (AMT / R0) * (1 - REW) * growth;
+  var later = function (R) { return (AMT / R) * (1 - REW); };
+  var be = AMT * (1 - REW) / prepay;
+
+  function el(n, a, t) {
+    var e = document.createElementNS(SVGNS, n);
+    for (var k in a) if (a.hasOwnProperty(k)) {
+      if (String(a[k]).indexOf("var(") !== -1) e.style.setProperty(k, a[k]);
+      else e.setAttribute(k, a[k]);
+    }
+    if (t !== undefined) e.textContent = t;
+    return e;
+  }
+  var svg = document.getElementById("chart");
+  var lo = R0 * 0.90, hi = R0 * 1.10;
+  var pts = [];
+  for (var i = 0; i <= 200; i++) {
+    var R = lo + (hi - lo) * (i / 200);
+    pts.push({ R: R, v: later(R) - prepay });
+  }
+  var vs = pts.map(function (p) { return p.v; });
+  var vMin = Math.min.apply(null, vs), vMax = Math.max.apply(null, vs);
+  var pad = (vMax - vMin) * 0.12; vMin -= pad; vMax += pad;
+  var x = function (R) { return PAD.l + (R - lo) / (hi - lo) * (W - PAD.l - PAD.r); };
+  var y = function (v) { return PAD.t + (vMax - v) / (vMax - vMin) * (H - PAD.t - PAD.b); };
+  var z = y(0);
+
+  var defs = el("defs");
+  var ct = el("clipPath", { id: "ct" });
+  ct.appendChild(el("rect", { x: PAD.l, y: PAD.t, width: W - PAD.l - PAD.r, height: Math.max(0, z - PAD.t) }));
+  var cb = el("clipPath", { id: "cb" });
+  cb.appendChild(el("rect", { x: PAD.l, y: z, width: W - PAD.l - PAD.r, height: Math.max(0, H - PAD.b - z) }));
+  defs.appendChild(ct); defs.appendChild(cb); svg.appendChild(defs);
+
+  [-300, -150, 0, 150, 300].forEach(function (t) {
+    if (t < vMin || t > vMax) return;
+    svg.appendChild(el("line", { x1: PAD.l, x2: W - PAD.r, y1: y(t), y2: y(t), stroke: "var(--hairline)", "stroke-width": 1 }));
+    svg.appendChild(el("text", {
+      x: PAD.l - 16, y: y(t) + 7, "text-anchor": "end", fill: "var(--muted)",
+      "font-size": 19, "font-family": "var(--mono)"
+    }, (t > 0 ? "+$" : t < 0 ? "−$" : "$") + Math.abs(t)));
+  });
+
+  var d = "M " + x(pts[0].R) + " " + y(pts[0].v);
+  for (var j = 1; j < pts.length; j++) d += " L " + x(pts[j].R) + " " + y(pts[j].v);
+  var area = d + " L " + x(pts[pts.length - 1].R) + " " + z + " L " + x(pts[0].R) + " " + z + " Z";
+
+  svg.appendChild(el("path", { d: area, fill: "var(--pre-fill)", "clip-path": "url(#ct)" }));
+  svg.appendChild(el("path", { d: area, fill: "var(--wait-fill)", "clip-path": "url(#cb)" }));
+  svg.appendChild(el("line", { x1: PAD.l, x2: W - PAD.r, y1: z, y2: z, stroke: "var(--rule)", "stroke-width": 2 }));
+  svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--pre)", "stroke-width": 3.5, "clip-path": "url(#ct)", "stroke-linecap": "round" }));
+  svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--wait)", "stroke-width": 3.5, "clip-path": "url(#cb)", "stroke-linecap": "round" }));
+
+  svg.appendChild(el("text", { x: PAD.l + 16, y: PAD.t + 30, fill: "var(--pre)", "font-size": 20, "font-family": "var(--mono)", "letter-spacing": ".08em" }, "PREPAYING AHEAD"));
+  svg.appendChild(el("text", { x: W - PAD.r - 16, y: H - PAD.b - 18, "text-anchor": "end", fill: "var(--wait)", "font-size": 20, "font-family": "var(--mono)", "letter-spacing": ".08em" }, "WAITING AHEAD"));
+
+  svg.appendChild(el("line", { x1: x(R0), x2: x(R0), y1: PAD.t, y2: H - PAD.b, stroke: "var(--ink)", "stroke-width": 1.5, "stroke-dasharray": "3 6", opacity: .5 }));
+  svg.appendChild(el("text", { x: x(R0) + 12, y: PAD.t + 30, fill: "var(--ink-2)", "font-size": 19, "font-family": "var(--mono)" }, "today ¥159.2"));
+
+  svg.appendChild(el("circle", { cx: x(be), cy: z, r: 9, fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 3 }));
+  // Below the zero line and left of the dot — the one region no mark occupies.
+  svg.appendChild(el("text", { x: x(be) - 20, y: z + 36, "text-anchor": "end", fill: "var(--ink)", "font-size": 21, "font-family": "var(--mono)" }, "break-even ¥156.0"));
+
+  svg.appendChild(el("line", { x1: PAD.l, x2: W - PAD.r, y1: H - PAD.b, y2: H - PAD.b, stroke: "var(--rule)", "stroke-width": 1 }));
+  [-8, -4, 0, 4, 8].forEach(function (p) {
+    var R = R0 * (1 + p / 100);
+    svg.appendChild(el("text", { x: x(R), y: H - PAD.b + 30, "text-anchor": "middle", fill: "var(--muted)", "font-size": 19, "font-family": "var(--mono)" }, "¥" + R.toFixed(1)));
+  });
+  svg.appendChild(el("text", { x: PAD.l, y: H - 10, fill: "var(--muted)", "font-size": 18, "font-family": "var(--mono)", "letter-spacing": ".1em" }, "← STRONGER YEN"));
+  svg.appendChild(el("text", { x: W - PAD.r, y: H - 10, "text-anchor": "end", fill: "var(--muted)", "font-size": 18, "font-family": "var(--mono)", "letter-spacing": ".1em" }, "WEAKER YEN →"));
+
+  document.title = "be=" + be.toFixed(2) + " cushion=" + ((R0 - be) / R0 * 100).toFixed(2) + "%";
+})();
+</script>
+</body>
+</html>
