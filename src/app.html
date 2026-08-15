@@ -1,4 +1,4 @@
-<title>Prepay or Wait — Japan trip currency calculator</title>
+<title>Prepay or Wait — should you pay for your trip now or later?</title>
 
 <style>
   :root {
@@ -17,6 +17,7 @@
     --wait-fill: rgba(194,59,59,.15);
     --pre-wash:  rgba(31,110,203,.08);
     --wait-wash: rgba(194,59,59,.08);
+    --live:      #0f7a3d;
     --shadow:    0 1px 2px rgba(14,17,22,.05), 0 10px 30px rgba(14,17,22,.05);
     --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, "JetBrains Mono", "Roboto Mono", Consolas, monospace;
@@ -38,6 +39,7 @@
       --wait-fill: rgba(230,103,103,.20);
       --pre-wash:  rgba(79,151,238,.10);
       --wait-wash: rgba(230,103,103,.10);
+      --live:      #3fbf72;
       --shadow:    0 1px 2px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.35);
     }
   }
@@ -57,10 +59,12 @@
     --wait-fill: rgba(230,103,103,.20);
     --pre-wash:  rgba(79,151,238,.10);
     --wait-wash: rgba(230,103,103,.10);
+    --live:      #3fbf72;
     --shadow:    0 1px 2px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.35);
   }
 
   body {
+    overflow-x: hidden; /* belt and braces: no sideways scroll on any phone */
     background: var(--page);
     color: var(--ink);
     font-family: var(--sans);
@@ -75,10 +79,9 @@
     padding: clamp(1.25rem, 4vw, 3.25rem) clamp(1rem, 4vw, 2rem) 5rem;
     display: flex;
     flex-direction: column;
-    gap: clamp(1.25rem, 3vw, 2rem);
+    gap: clamp(1.25rem, 3vw, 1.75rem);
   }
 
-  /* ---------- shared type roles ---------- */
   .eyebrow {
     font-family: var(--mono);
     font-size: .6875rem;
@@ -86,7 +89,6 @@
     text-transform: uppercase;
     color: var(--muted);
   }
-  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
   /* ---------- masthead ---------- */
   .masthead { display: flex; flex-direction: column; gap: .625rem; }
@@ -98,12 +100,35 @@
     text-wrap: balance;
     margin: 0;
   }
-  .dek {
-    color: var(--ink-2);
-    max-width: 60ch;
-    font-size: .9375rem;
-    margin: 0;
+  .dek { color: var(--ink-2); max-width: 62ch; font-size: .9375rem; margin: 0; }
+
+  /* ---------- the three trade-offs ---------- */
+  .tradeoffs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: .75rem;
   }
+  .tradeoff {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: .875rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    font-size: .8125rem;
+    color: var(--ink-2);
+  }
+  .tradeoff b { color: var(--ink); font-size: .875rem; font-weight: 620; }
+  .tradeoff .side {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .tradeoff[data-for="prepay"] .side { color: var(--pre); }
+  .tradeoff[data-for="wait"] .side { color: var(--wait); }
+  .tradeoff[data-for="risk"] .side { color: var(--muted); }
 
   /* ---------- cards ---------- */
   .card {
@@ -116,127 +141,11 @@
     flex-direction: column;
     gap: 1rem;
   }
-  .card > h2 {
-    font-size: .9375rem;
-    font-weight: 620;
-    letter-spacing: -.01em;
-    margin: 0;
-  }
+  .card > h2 { font-size: .9375rem; font-weight: 620; letter-spacing: -.01em; margin: 0; }
 
-  /* ---------- verdict ---------- */
-  .verdict {
-    border-left: 3px solid var(--rule);
-    transition: border-color .2s ease;
-  }
-  .verdict[data-side="prepay"] { border-left-color: var(--pre); background: linear-gradient(90deg, var(--pre-wash), transparent 45%), var(--surface); }
-  .verdict[data-side="wait"]   { border-left-color: var(--wait); background: linear-gradient(90deg, var(--wait-wash), transparent 45%), var(--surface); }
-  .verdict-head {
-    font-size: clamp(1.5rem, 4.6vw, 2.125rem);
-    line-height: 1.12;
-    letter-spacing: -.025em;
-    font-weight: 660;
-    margin: 0;
-    text-wrap: balance;
-  }
-  .verdict[data-side="prepay"] .verdict-head { color: var(--pre); }
-  .verdict[data-side="wait"]   .verdict-head { color: var(--wait); }
-  .verdict-sub { margin: 0; color: var(--ink-2); font-size: .9375rem; max-width: 56ch; }
-  .verdict-sub strong { color: var(--ink); font-weight: 620; }
-
-  /* ---------- stat tiles ---------- */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-    gap: .75rem;
-  }
-  .tile {
-    background: var(--surface);
-    border: 1px solid var(--hairline);
-    border-radius: 12px;
-    padding: .875rem 1rem 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: .3rem;
-  }
-  .tile-value {
-    font-family: var(--mono);
-    font-variant-numeric: tabular-nums;
-    font-size: 1.625rem;
-    letter-spacing: -.02em;
-    line-height: 1.1;
-  }
-  .tile-note { font-size: .8125rem; color: var(--ink-2); }
-
-  /* ---------- rate ruler ---------- */
-  .ruler-ends {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--mono);
-    font-size: .6875rem;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .track {
-    position: relative;
-    height: 2.75rem;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid var(--hairline);
-  }
-  .track-fill { position: absolute; inset: 0; }
-  .track-legend {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-family: var(--mono);
-    font-size: .6875rem;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .track-legend.left  { left: .625rem; color: var(--pre); }
-  .track-legend.right { right: .625rem; color: var(--wait); }
-  .marker {
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 2px;
-    transform: translateX(-1px);
-  }
-  .marker.today    { background: var(--ink); }
-  .marker.breakeven { background: var(--ink); opacity: .35; }
-  .marker.breakeven::after {
-    content: "";
-    position: absolute; inset: 0;
-    border-left: 2px dashed var(--ink);
-  }
-  .marker-rail { position: relative; height: 2.5rem; }
-  .flag {
-    position: absolute;
-    top: 0;
-    display: flex;
-    flex-direction: column;
-    gap: .1rem;
-    font-size: .75rem;
-    line-height: 1.25;
-    white-space: nowrap;
-  }
-  .flag .k {
-    font-family: var(--mono);
-    font-size: .625rem;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .flag .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .875rem; }
-
-  /* ---------- controls ---------- */
-  .grid-2 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-    gap: .875rem 1rem;
-  }
-  .field { display: flex; flex-direction: column; gap: .3rem; }
+  /* ---------- ask (the three questions) ---------- */
+  .ask { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .875rem 1rem; }
+  .field { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
   .field > label {
     font-family: var(--mono);
     font-size: .625rem;
@@ -255,8 +164,11 @@
     padding: .5rem .625rem;
     width: 100%;
     min-width: 0;
+    height: 2.5rem;
   }
-  .field input:focus-visible, .field select:focus-visible, .seg button:focus-visible, summary:focus-visible, .ghost:focus-visible {
+  .field select { font-family: var(--sans); }
+  .field input:focus-visible, .field select:focus-visible,
+  .seg button:focus-visible, .ghost:focus-visible, .disclose:focus-visible, .linkish:focus-visible {
     outline: 2px solid var(--pre);
     outline-offset: 2px;
   }
@@ -273,68 +185,140 @@
   }
   .seg button {
     font-family: var(--mono);
-    font-size: .8125rem;
+    font-size: .75rem;
     border: 0;
     background: transparent;
     color: var(--muted);
-    padding: 0 .7rem;
+    padding: 0 .55rem;
     border-radius: 6px;
     cursor: pointer;
   }
   .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }
 
-  details.adv { border-top: 1px solid var(--hairline); padding-top: .875rem; }
-  details.adv > summary {
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: .6875rem;
-    letter-spacing: .11em;
-    text-transform: uppercase;
-    color: var(--muted);
-    list-style: none;
+  .ratebar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .5rem 1rem;
+    border-top: 1px solid var(--hairline);
+    padding-top: .75rem;
+    font-size: .8125rem;
+    color: var(--ink-2);
   }
-  details.adv > summary::-webkit-details-marker { display: none; }
-  details.adv > summary::before { content: "+ "; }
-  details.adv[open] > summary::before { content: "− "; }
-  details.adv > .grid-2 { margin-top: .875rem; }
+  .ratebar .rate-num { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); font-size: .9375rem; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: .35rem; vertical-align: middle; }
+  .dot.live { background: var(--live); }
+  .dot.stale { background: var(--muted); }
+  .linkish {
+    background: none; border: 0; padding: 0;
+    color: var(--pre); font: inherit; font-size: .8125rem;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
 
-  .ghost {
+  /* ---------- verdict ---------- */
+  .verdict { border-left: 3px solid var(--rule); }
+  .verdict[data-side="prepay"] { border-left-color: var(--pre); background: linear-gradient(90deg, var(--pre-wash), transparent 45%), var(--surface); }
+  .verdict[data-side="wait"]   { border-left-color: var(--wait); background: linear-gradient(90deg, var(--wait-wash), transparent 45%), var(--surface); }
+  .verdict-head {
+    font-size: clamp(1.5rem, 4.6vw, 2.125rem);
+    line-height: 1.12;
+    letter-spacing: -.025em;
+    font-weight: 660;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .verdict[data-side="prepay"] .verdict-head { color: var(--pre); }
+  .verdict[data-side="wait"]   .verdict-head { color: var(--wait); }
+  .verdict-sub { margin: 0; color: var(--ink-2); font-size: .9375rem; max-width: 58ch; }
+  .verdict-sub strong { color: var(--ink); font-weight: 620; }
+  .verdict-swing {
+    margin: 0;
+    font-size: .875rem;
+    color: var(--ink-2);
+    border-top: 1px solid var(--hairline);
+    padding-top: .75rem;
+    max-width: 58ch;
+  }
+
+  .disclose {
     align-self: flex-start;
     font-family: var(--mono);
     font-size: .6875rem;
     letter-spacing: .1em;
     text-transform: uppercase;
-    color: var(--muted);
-    background: transparent;
+    color: var(--ink-2);
+    background: var(--surface);
     border: 1px solid var(--hairline);
-    border-radius: 7px;
-    padding: .35rem .6rem;
+    border-radius: 9px;
+    padding: .55rem .85rem;
     cursor: pointer;
   }
-  .ghost:hover { color: var(--ink); border-color: var(--rule); }
+  .disclose:hover { border-color: var(--rule); color: var(--ink); }
+  .disclose::before { content: "+ "; }
+  .disclose[aria-expanded="true"]::before { content: "− "; }
+  #details[hidden] { display: none; }
+  #details { display: flex; flex-direction: column; gap: clamp(1.25rem, 3vw, 1.75rem); }
+
+  /* ---------- stat tiles ---------- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: .75rem; }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: .875rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+  }
+  .tile-value {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem;
+    letter-spacing: -.02em;
+    line-height: 1.15;
+  }
+  .tile-note { font-size: .8125rem; color: var(--ink-2); }
+
+  /* ---------- rate ruler ---------- */
+  .ruler-ends {
+    display: flex; justify-content: space-between; gap: 1rem;
+    font-family: var(--mono); font-size: .6875rem;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  }
+  .track { position: relative; height: 2.75rem; border-radius: 8px; overflow: hidden; border: 1px solid var(--hairline); }
+  .track-fill { position: absolute; inset: 0; }
+  .track-legend {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    font-family: var(--mono); font-size: .6875rem;
+    letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+  }
+  .track-legend.left  { left: .625rem; color: var(--pre); }
+  .track-legend.right { right: .625rem; color: var(--wait); }
+  .marker { position: absolute; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); }
+  .marker.today { background: var(--ink); }
+  .marker.breakeven { border-left: 2px dashed var(--ink); opacity: .5; }
+  .marker-rail { position: relative; height: 2.5rem; }
+  .flag { position: absolute; top: 0; display: flex; flex-direction: column; gap: .1rem; white-space: nowrap; }
+  .flag .k {
+    font-family: var(--mono); font-size: .625rem;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+  }
+  .flag .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .875rem; }
 
   /* ---------- chart ---------- */
   .chart-wrap { position: relative; }
   .chart-scroll { overflow-x: auto; }
   svg.chart { display: block; width: 100%; height: auto; min-width: 21rem; touch-action: pan-y; }
   .tip {
-    position: absolute;
-    pointer-events: none;
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    padding: .5rem .625rem;
-    font-size: .75rem;
-    line-height: 1.4;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity .12s ease;
-    z-index: 3;
+    position: absolute; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 8px; box-shadow: var(--shadow);
+    padding: .5rem .625rem; font-size: .75rem; line-height: 1.4;
+    white-space: nowrap; opacity: 0; transition: opacity .12s ease; z-index: 3;
   }
   .tip[data-on="1"] { opacity: 1; }
   .tip .t-rate { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
-  .tip .t-val  { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .9375rem; display: block; margin-top: .1rem; }
+  .tip .t-val { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .9375rem; display: block; margin-top: .1rem; }
   .legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .8125rem; color: var(--ink-2); }
   .legend span { display: inline-flex; align-items: center; gap: .4rem; }
   .swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
@@ -345,242 +329,374 @@
   th, td { text-align: right; padding: .5rem .625rem; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; }
   thead th {
-    font-family: var(--mono);
-    font-size: .625rem;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 500;
-    border-bottom-color: var(--rule);
+    font-family: var(--mono); font-size: .625rem;
+    letter-spacing: .09em; text-transform: uppercase;
+    color: var(--muted); font-weight: 500; border-bottom-color: var(--rule);
   }
   tbody td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   tbody tr[data-now="1"] td { background: var(--surface-2); }
-  tbody tr[data-now="1"] td:first-child::after { content: " ← today"; color: var(--muted); font-size: .6875rem; }
   .chip {
-    display: inline-block;
-    font-family: var(--mono);
-    font-size: .625rem;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    padding: .1rem .4rem;
-    border-radius: 5px;
+    display: inline-block; font-family: var(--mono); font-size: .625rem;
+    letter-spacing: .07em; text-transform: uppercase;
+    padding: .1rem .4rem; border-radius: 5px;
   }
   .chip.prepay { color: var(--pre); background: var(--pre-fill); }
-  .chip.wait   { color: var(--wait); background: var(--wait-fill); }
+  .chip.wait { color: var(--wait); background: var(--wait-fill); }
+  .chip.flat { color: var(--muted); }
+
+  /* ---------- assumptions ---------- */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: .875rem 1rem; }
+  .ghost {
+    align-self: flex-start;
+    font-family: var(--mono); font-size: .6875rem;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    background: transparent; border: 1px solid var(--hairline);
+    border-radius: 7px; padding: .35rem .6rem; cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); border-color: var(--rule); }
 
   /* ---------- notes ---------- */
   .notes { display: flex; flex-direction: column; gap: .875rem; }
   .note { display: grid; grid-template-columns: 1.25rem 1fr; gap: .5rem; font-size: .875rem; color: var(--ink-2); }
-  .note .n {
-    font-family: var(--mono);
-    font-size: .6875rem;
-    color: var(--muted);
-    padding-top: .2rem;
-  }
+  .note .n { font-family: var(--mono); font-size: .6875rem; color: var(--muted); padding-top: .2rem; }
   .note b { color: var(--ink); font-weight: 620; }
-  footer { color: var(--muted); font-size: .75rem; border-top: 1px solid var(--hairline); padding-top: 1rem; }
-  footer code { font-family: var(--mono); }
+  footer { color: var(--muted); font-size: .75rem; border-top: 1px solid var(--hairline); padding-top: 1rem; display: flex; flex-direction: column; gap: .5rem; }
+  footer code { font-family: var(--mono); overflow-wrap: anywhere; }
+  footer a { color: inherit; }
 
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; animation: none !important; }
-  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 
 <div class="wrap">
 
   <header class="masthead">
-    <p class="eyebrow">¥ / $ &nbsp;·&nbsp; prepay vs. wait</p>
-    <h1>Prepay the trip now, or pay when you get there?</h1>
+    <p class="eyebrow">prepay vs. wait &nbsp;·&nbsp; any country</p>
+    <h1>Should you pay for your trip now, or when you get there?</h1>
     <p class="dek">
-      Prepaying locks in today's exchange rate and earns card points now. Waiting keeps your cash
-      earning interest — and leaves you exposed to whatever the yen does between now and your trip.
-      This puts both on the same footing and tells you how far the rate has to move before the
-      answer flips.
+      Hotels and tours often let you prepay. Prepaying locks in today's exchange rate and earns
+      your card points now — but your money stops earning interest, and you're betting the
+      currency won't move in your favour. Three questions below, and this works out which side
+      you're on and by how much.
     </p>
   </header>
 
-  <section class="card verdict" id="verdict" data-side="wait" aria-live="polite">
-    <p class="eyebrow">The math says</p>
-    <p class="verdict-head" id="verdictHead">Wait and pay in March</p>
-    <p class="verdict-sub" id="verdictSub"></p>
-  </section>
-
-  <section class="stats">
-    <div class="tile">
-      <p class="eyebrow">Break-even rate</p>
-      <p class="tile-value" id="beRate">—</p>
-      <p class="tile-note" id="beNote"></p>
+  <section class="tradeoffs">
+    <div class="tradeoff" data-for="prepay">
+      <span class="side">Prepaying gives you</span>
+      <b>Card points, today</b>
+      <span>And a rate you can stop worrying about.</span>
     </div>
-    <div class="tile">
-      <p class="eyebrow">Your cushion</p>
-      <p class="tile-value" id="cushion">—</p>
-      <p class="tile-note" id="cushionNote"></p>
+    <div class="tradeoff" data-for="wait">
+      <span class="side">Prepaying costs you</span>
+      <b>Interest on your own money</b>
+      <span>Cash spent now stops earning until the trip.</span>
     </div>
-    <div class="tile">
-      <p class="eyebrow">Rough odds prepaying wins</p>
-      <p class="tile-value" id="odds">—</p>
-      <p class="tile-note" id="oddsNote"></p>
+    <div class="tradeoff" data-for="risk">
+      <span class="side">And either way</span>
+      <b>The rate moves</b>
+      <span>Whichever way it goes lands on you.</span>
     </div>
   </section>
 
   <section class="card">
-    <h2>Where today's rate sits</h2>
-    <div class="ruler-ends">
-      <span>← stronger yen · trip costs more</span>
-      <span>weaker yen · trip costs less →</span>
-    </div>
-    <div class="track">
-      <div class="track-fill" id="trackFill"></div>
-      <div class="track-legend left">Prepay wins</div>
-      <div class="track-legend right">Waiting wins</div>
-      <div class="marker breakeven" id="mkBreak"></div>
-      <div class="marker today" id="mkToday"></div>
-    </div>
-    <div class="marker-rail" id="rail"></div>
-  </section>
-
-  <section class="card">
-    <h2>Your numbers</h2>
-    <div class="grid-2">
+    <h2>Your trip</h2>
+    <div class="ask">
       <div class="field">
-        <label for="amount">What you'd prepay</label>
+        <label for="dest">Where are you going?</label>
+        <select id="dest"></select>
+        <span class="hint" id="destHint"></span>
+      </div>
+      <div class="field">
+        <label for="amount">How much are they asking?</label>
         <div class="amount-row">
           <input id="amount" type="number" inputmode="decimal" min="0" step="1000" value="450000">
           <div class="seg" role="group" aria-label="Currency of the amount">
-            <button type="button" id="curJPY" aria-pressed="true">¥</button>
-            <button type="button" id="curUSD" aria-pressed="false">$</button>
+            <button type="button" id="curLocal" aria-pressed="true">JPY</button>
+            <button type="button" id="curHome" aria-pressed="false">USD</button>
           </div>
         </div>
         <span class="hint" id="amountHint"></span>
       </div>
       <div class="field">
-        <label for="rate">Today's rate — ¥ per $1</label>
-        <input id="rate" type="number" inputmode="decimal" min="1" step="0.1" value="159.3">
-        <span class="hint">USD/JPY quote from your bank or card</span>
-      </div>
-      <div class="field">
-        <label for="payDate">You'd otherwise pay on</label>
+        <label for="payDate">When would you otherwise pay?</label>
         <input id="payDate" type="date" value="2027-03-15">
         <span class="hint" id="daysHint"></span>
       </div>
-      <div class="field">
-        <label for="apy">Your cash earns — APY %</label>
-        <input id="apy" type="number" inputmode="decimal" min="0" step="0.05" value="4.0">
-        <span class="hint">Savings, T-bill, or money market</span>
-      </div>
     </div>
+    <div class="ratebar">
+      <span><span class="dot stale" id="rateDot"></span><span id="rateStatus">Loading rates…</span></span>
+      <span class="rate-num" id="rateNow">—</span>
+      <button type="button" class="linkish" id="rateReset" hidden>Use the live rate</button>
+    </div>
+  </section>
 
-    <details class="adv">
-      <summary>Fine print — points, fees, tax, volatility</summary>
+  <section class="card verdict" id="verdict" data-side="wait" aria-live="polite">
+    <p class="eyebrow">The answer</p>
+    <p class="verdict-head" id="verdictHead">—</p>
+    <p class="verdict-sub" id="verdictSub"></p>
+    <p class="verdict-swing" id="verdictSwing"></p>
+  </section>
+
+  <button type="button" class="disclose" id="disclose" aria-expanded="false" aria-controls="details">
+    Show the details
+  </button>
+
+  <div id="details" hidden>
+
+    <section class="stats">
+      <div class="tile">
+        <p class="eyebrow">Break-even rate</p>
+        <p class="tile-value" id="beRate">—</p>
+        <p class="tile-note" id="beNote"></p>
+      </div>
+      <div class="tile">
+        <p class="eyebrow">Your cushion</p>
+        <p class="tile-value" id="cushion">—</p>
+        <p class="tile-note" id="cushionNote"></p>
+      </div>
+      <div class="tile">
+        <p class="eyebrow">Rough odds prepaying wins</p>
+        <p class="tile-value" id="odds">—</p>
+        <p class="tile-note" id="oddsNote"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Where today's rate sits</h2>
+      <div class="ruler-ends">
+        <span id="rulerLeft">← stronger · costs more</span>
+        <span id="rulerRight">weaker · costs less →</span>
+      </div>
+      <div class="track">
+        <div class="track-fill" id="trackFill"></div>
+        <div class="track-legend left">Prepay wins</div>
+        <div class="track-legend right">Waiting wins</div>
+        <div class="marker breakeven" id="mkBreak"></div>
+        <div class="marker today" id="mkToday"></div>
+      </div>
+      <div class="marker-rail" id="rail"></div>
+    </section>
+
+    <section class="card">
+      <h2>What you gain or lose by prepaying, at every future rate</h2>
+      <div class="chart-wrap">
+        <div class="chart-scroll">
+          <svg class="chart" id="chart" viewBox="0 0 760 320" role="img" aria-labelledby="chartTitle">
+            <title id="chartTitle">Advantage of prepaying, in future money, across a range of exchange rates on the payment date</title>
+          </svg>
+        </div>
+        <div class="tip" id="tip"></div>
+      </div>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--pre)"></i> Prepaying comes out ahead</span>
+        <span><i class="swatch" style="background:var(--wait)"></i> Waiting comes out ahead</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>The same thing as a table</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Rate then</th>
+              <th scope="col">Move</th>
+              <th scope="col">Cost if you wait</th>
+              <th scope="col">Cost if you prepay</th>
+              <th scope="col">Difference</th>
+              <th scope="col">Better</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p class="tile-note" id="tableNote"></p>
+    </section>
+
+    <section class="card">
+      <h2>Assumptions — change any of these</h2>
       <div class="grid-2">
         <div class="field">
-          <label for="rewPre">Card rewards if you prepay %</label>
-          <input id="rewPre" type="number" inputmode="decimal" min="0" step="0.25" value="2.0">
+          <label for="home">Your home currency</label>
+          <select id="home"></select>
         </div>
         <div class="field">
-          <label for="rewLate">Card rewards in March %</label>
-          <input id="rewLate" type="number" inputmode="decimal" min="0" step="0.25" value="2.0">
-          <span class="hint">Set to 0 if you'd pay cash there</span>
+          <label for="rate" id="rateLabel">Exchange rate</label>
+          <input id="rate" type="number" inputmode="decimal" min="0" step="0.01">
+          <span class="hint" id="rateHint"></span>
         </div>
         <div class="field">
-          <label for="fxPre">Foreign txn fee, prepay %</label>
-          <input id="fxPre" type="number" inputmode="decimal" min="0" step="0.25" value="0">
+          <label for="apy">Your cash earns — APY %</label>
+          <input id="apy" type="number" inputmode="decimal" min="0" step="0.05">
+          <span class="hint" id="apyHint"></span>
         </div>
         <div class="field">
-          <label for="fxLate">Foreign txn fee, March %</label>
-          <input id="fxLate" type="number" inputmode="decimal" min="0" step="0.25" value="0">
-        </div>
-        <div class="field">
-          <label for="tax">Tax on interest %</label>
+          <label for="tax">Tax on that interest %</label>
           <input id="tax" type="number" inputmode="decimal" min="0" max="60" step="1" value="0">
           <span class="hint">Interest is taxable; points usually aren't</span>
         </div>
         <div class="field">
-          <label for="vol">Yen volatility, annual %</label>
-          <input id="vol" type="number" inputmode="decimal" min="1" max="40" step="0.5" value="10">
-          <span class="hint">USD/JPY has run near 10%</span>
+          <label for="rewPre">Card rewards if you prepay %</label>
+          <input id="rewPre" type="number" inputmode="decimal" min="0" step="0.25" value="2">
+        </div>
+        <div class="field">
+          <label for="rewLate">Card rewards if you wait %</label>
+          <input id="rewLate" type="number" inputmode="decimal" min="0" step="0.25" value="2">
+          <span class="hint">Set to 0 if you'd pay cash there</span>
+        </div>
+        <div class="field">
+          <label for="fxPre">Foreign fee, prepay %</label>
+          <input id="fxPre" type="number" inputmode="decimal" min="0" step="0.25" value="0">
+        </div>
+        <div class="field">
+          <label for="fxLate">Foreign fee, later %</label>
+          <input id="fxLate" type="number" inputmode="decimal" min="0" step="0.25" value="0">
+        </div>
+        <div class="field">
+          <label for="vol">Currency volatility, annual %</label>
+          <input id="vol" type="number" inputmode="decimal" min="0.5" max="60" step="0.5">
+          <span class="hint">Only feeds the odds figure</span>
         </div>
       </div>
-    </details>
+      <button type="button" class="ghost" id="reset">Reset to defaults</button>
+    </section>
 
-    <button type="button" class="ghost" id="reset">Reset to defaults</button>
-  </section>
-
-  <section class="card">
-    <h2>What you gain or lose by prepaying, at every March rate</h2>
-    <div class="chart-wrap">
-      <div class="chart-scroll">
-        <svg class="chart" id="chart" viewBox="0 0 760 320" role="img" aria-labelledby="chartTitle">
-          <title id="chartTitle">Advantage of prepaying, in March dollars, across a range of March exchange rates</title>
-        </svg>
-      </div>
-      <div class="tip" id="tip"></div>
-    </div>
-    <div class="legend">
-      <span><i class="swatch" style="background:var(--pre)"></i> Prepaying comes out ahead</span>
-      <span><i class="swatch" style="background:var(--wait)"></i> Waiting comes out ahead</span>
-    </div>
-  </section>
-
-  <section class="card">
-    <h2>The same thing as a table</h2>
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">March rate</th>
-            <th scope="col">Yen move</th>
-            <th scope="col">Cost if you wait</th>
-            <th scope="col">Cost if you prepay</th>
-            <th scope="col">Difference</th>
-            <th scope="col">Better</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-    <p class="tile-note">All figures are March dollars — the prepay column already includes the interest you'd forgo and the points you'd earn.</p>
-  </section>
-
-  <section class="card notes">
-    <h2>What the math can't price</h2>
-    <div class="note"><span class="n">01</span><p><b>Refundability.</b> A prepaid rate is usually non-refundable or penalty-heavy. If the trip could change, that flexibility is worth real money the calculator above doesn't see.</p></div>
-    <div class="note"><span class="n">02</span><p><b>Chargeback leverage.</b> Paying at the counter in March keeps your card dispute rights close to the stay. Prepaying seven months out means a dispute window that may close before you travel.</p></div>
-    <div class="note"><span class="n">03</span><p><b>Prepay discounts.</b> Many hotels shave 5–15% off for prepaid, non-refundable bookings. If yours does, that discount usually swamps everything modeled here — enter the discounted amount and compare.</p></div>
-    <div class="note"><span class="n">04</span><p><b>Point value.</b> The rewards fields assume points are worth about a cent each. If you redeem for outsized value — or if the spend triggers a sign-up bonus — prepaying is worth more than shown.</p></div>
-    <div class="note"><span class="n">05</span><p><b>The odds are a model, not a forecast.</b> They assume the rate wanders randomly from today's level with no drift. Nobody knows where USD/JPY lands in March.</p></div>
-  </section>
+    <section class="card notes">
+      <h2>What the math can't price</h2>
+      <div class="note"><span class="n">01</span><p><b>Refundability.</b> A prepaid rate is usually non-refundable or penalty-heavy. If the trip could change, that flexibility is worth real money nothing above can see.</p></div>
+      <div class="note"><span class="n">02</span><p><b>Chargeback leverage.</b> Paying on arrival keeps your card dispute rights close to the stay. Prepaying many months out can mean the dispute window closes before you travel.</p></div>
+      <div class="note"><span class="n">03</span><p><b>Prepay discounts.</b> Many hotels shave 5–15% off for prepaid, non-refundable bookings. If yours does, that discount usually swamps everything here — put the discounted amount in and compare.</p></div>
+      <div class="note"><span class="n">04</span><p><b>Point value.</b> The rewards fields assume points are worth about a cent each. Redeem for outsized value, or trigger a sign-up bonus, and prepaying is worth more than shown.</p></div>
+      <div class="note"><span class="n">05</span><p><b>The odds are a model, not a forecast.</b> They assume the rate wanders randomly from today's level with no drift. Nobody knows where it lands.</p></div>
+    </section>
+  </div>
 
   <footer>
-    <p>Break-even rate <code>R* = R₀ × (1+fee_late)(1−rew_late) ÷ [(1+fee_pre)(1−rew_pre) × (1+r)^t]</code>, where <code>R</code> is yen per dollar, <code>r</code> is your after-tax yield and <code>t</code> is years until the payment date. Everything is compared in March dollars. Not financial advice.</p>
+    <p><code>R* = R₀ × (1+fee_late)(1−rew_late) ÷ [(1+fee_pre)(1−rew_pre) × (1+r)^t]</code> — where <code>R</code> is local currency per unit of home currency, <code>r</code> is your after-tax yield and <code>t</code> is years until the payment date. Both sides are compared in future money. Prepaying wins when the rate on the day is below <code>R*</code>.</p>
+    <p id="dataNote"></p>
+    <p>Not financial advice.</p>
   </footer>
 </div>
+
+<script id="pw-data" type="application/json">__PW_DATA__</script>
 
 <script>
 (function () {
   "use strict";
 
-  var DEFAULTS = {
-    amount: 450000, cur: "JPY", rate: 159.3, payDate: "2027-03-15",
-    apy: 4.0, rewPre: 2.0, rewLate: 2.0, fxPre: 0, fxLate: 0, tax: 0, vol: 10
-  };
-  var STORE = "prepay-or-wait/v1";
+  var DATA = JSON.parse(document.getElementById("pw-data").textContent);
+  var STORE = "prepay-or-wait/v2";
+
+  var rates = DATA.rates;            // everything quoted per 1 unit of DATA.base
+  var ratesAsOf = DATA.ratesAsOf;
+  var ratesLive = false;
 
   var $ = function (id) { return document.getElementById(id); };
+  var state = { dest: "JP", home: "USD", amountIn: "local", rateTouched: false, apyTouched: false, volTouched: false };
+
   var els = {
-    amount: $("amount"), rate: $("rate"), payDate: $("payDate"), apy: $("apy"),
-    rewPre: $("rewPre"), rewLate: $("rewLate"), fxPre: $("fxPre"), fxLate: $("fxLate"),
-    tax: $("tax"), vol: $("vol")
+    dest: $("dest"), home: $("home"), amount: $("amount"), payDate: $("payDate"),
+    rate: $("rate"), apy: $("apy"), tax: $("tax"), rewPre: $("rewPre"),
+    rewLate: $("rewLate"), fxPre: $("fxPre"), fxLate: $("fxLate"), vol: $("vol")
   };
-  var currency = DEFAULTS.cur;
+
+  /* ---------- lookups ---------- */
+  function place(id) {
+    for (var i = 0; i < DATA.places.length; i++) if (DATA.places[i].id === id) return DATA.places[i];
+    return DATA.places[0];
+  }
+  function localCur() { return place(state.dest).cur; }
+  function curName(code) { return (DATA.currencies[code] && DATA.currencies[code].name) || code; }
+
+  // Units of `local` per 1 unit of `home`.
+  function pairRate(home, local) {
+    if (!rates[home] || !rates[local]) return null;
+    return rates[local] / rates[home];
+  }
 
   /* ---------- formatting ---------- */
-  var usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-  var usd2 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  var jpy0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
-  function money(v) { return Math.abs(v) >= 1000 ? usd0.format(v) : usd2.format(v); }
-  function rateStr(v) { return "¥" + v.toFixed(1); }
+  // A currency's own decimal convention: 2 for USD, 0 for JPY and KRW, 3 for KWD.
+  var digitCache = {};
+  function curDigits(code) {
+    if (digitCache[code] === undefined) {
+      try {
+        digitCache[code] = new Intl.NumberFormat(undefined, { style: "currency", currency: code })
+          .resolvedOptions().maximumFractionDigits;
+      } catch (e) { digitCache[code] = 2; }
+    }
+    return digitCache[code];
+  }
+  function fmtCur(v, code, forceDecimals) {
+    var d = forceDecimals !== undefined
+      ? forceDecimals
+      : (Math.abs(v) >= 1000 ? 0 : curDigits(code));
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency", currency: code,
+        minimumFractionDigits: d, maximumFractionDigits: d
+      }).format(v);
+    } catch (e) {
+      return code + " " + v.toFixed(d);
+    }
+  }
+  function home(v) { return fmtCur(v, state.home); }
+  // Rates span ₫26,000 to ¥159 to £0.74 to $0.0063 — hold roughly five significant
+  // digits so a sub-1 rate doesn't collapse onto its own break-even.
+  function fmtRate(R) {
+    var d = R >= 1000 ? 0 : R >= 100 ? 1 : R >= 10 ? 2 : R >= 1 ? 3
+      : Math.min(8, 4 + Math.ceil(-Math.log(R) / Math.LN10));
+    return R.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function rateLine(R) { return fmtRate(R) + " " + localCur() + " per 1 " + state.home; }
   function pct(v, d) { return (v * 100).toFixed(d === undefined ? 2 : d) + "%"; }
+
+  /* ---------- populate the pickers ---------- */
+  function buildDestOptions() {
+    var order = ["Asia", "Europe", "Americas", "Africa", "Oceania", "Antarctic"];
+    var byRegion = {};
+    DATA.places.forEach(function (p) { (byRegion[p.region] = byRegion[p.region] || []).push(p); });
+    var frag = document.createDocumentFragment();
+    order.concat(Object.keys(byRegion).filter(function (r) { return order.indexOf(r) === -1; }))
+      .forEach(function (region) {
+        if (!byRegion[region]) return;
+        var g = document.createElement("optgroup");
+        g.label = region;
+        byRegion[region].forEach(function (p) {
+          var o = document.createElement("option");
+          o.value = p.id;
+          o.textContent = (p.flag ? p.flag + "  " : "") + p.name + " · " + p.cur;
+          g.appendChild(o);
+        });
+        frag.appendChild(g);
+      });
+    els.dest.appendChild(frag);
+  }
+
+  function buildHomeOptions() {
+    var codes = Object.keys(DATA.currencies).sort();
+    var frag = document.createDocumentFragment();
+    codes.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c;
+      o.textContent = c + " — " + curName(c);
+      frag.appendChild(o);
+    });
+    els.home.appendChild(frag);
+  }
+
+  function detectHome() {
+    try {
+      var region = null;
+      if (typeof Intl.Locale === "function") region = new Intl.Locale(navigator.language).region;
+      if (!region) {
+        var m = /[-_]([A-Za-z]{2})$/.exec(navigator.language || "");
+        region = m ? m[1].toUpperCase() : null;
+      }
+      if (!region) return "USD";
+      var p = DATA.places.find(function (q) { return q.id === region; });
+      return p && rates[p.cur] ? p.cur : "USD";
+    } catch (e) { return "USD"; }
+  }
 
   /* ---------- math ---------- */
   function num(el, fallback) {
@@ -588,29 +704,45 @@
     return isFinite(v) ? v : fallback;
   }
 
+  function defaultApy() {
+    var p = DATA.policy[state.home];
+    return p === undefined ? 3 : p;
+  }
+  function defaultVol() {
+    var c = DATA.currencies[localCur()];
+    var lv = c ? c.vol : 13;
+    var hc = DATA.currencies[state.home];
+    var hv = hc ? hc.vol : 9;
+    // Same currency on both sides means no FX risk at all.
+    if (localCur() === state.home) return 0.5;
+    return Math.max(lv, hv);
+  }
+
   function readInputs() {
-    var rate = Math.max(1, num(els.rate, DEFAULTS.rate));
-    var raw = Math.max(0, num(els.amount, DEFAULTS.amount));
-    var amountJpy = currency === "JPY" ? raw : raw * rate;
+    var lc = localCur();
+    var R0 = Math.max(1e-9, num(els.rate, pairRate(state.home, lc) || 1));
+    var raw = Math.max(0, num(els.amount, 0));
+    var amountLocal = state.amountIn === "local" ? raw : raw * R0;
 
     var today = new Date();
     today.setHours(0, 0, 0, 0);
-    var parts = (els.payDate.value || DEFAULTS.payDate).split("-");
+    var parts = (els.payDate.value || "2027-03-15").split("-");
     var pay = new Date(+parts[0], (+parts[1] || 1) - 1, +parts[2] || 1);
     var days = Math.max(0, Math.round((pay - today) / 86400000));
 
     return {
-      amountJpy: amountJpy,
-      rate0: rate,
+      local: lc,
+      amountLocal: amountLocal,
+      rate0: R0,
       days: days,
       years: days / 365,
-      apy: Math.max(0, num(els.apy, DEFAULTS.apy)) / 100,
-      tax: Math.min(0.6, Math.max(0, num(els.tax, DEFAULTS.tax))) / 100,
-      rewPre: Math.max(0, num(els.rewPre, DEFAULTS.rewPre)) / 100,
-      rewLate: Math.max(0, num(els.rewLate, DEFAULTS.rewLate)) / 100,
-      fxPre: Math.max(0, num(els.fxPre, DEFAULTS.fxPre)) / 100,
-      fxLate: Math.max(0, num(els.fxLate, DEFAULTS.fxLate)) / 100,
-      vol: Math.max(0.01, num(els.vol, DEFAULTS.vol) / 100)
+      apy: Math.max(0, num(els.apy, defaultApy())) / 100,
+      tax: Math.min(0.6, Math.max(0, num(els.tax, 0))) / 100,
+      rewPre: Math.max(0, num(els.rewPre, 2)) / 100,
+      rewLate: Math.max(0, num(els.rewLate, 2)) / 100,
+      fxPre: Math.max(0, num(els.fxPre, 0)) / 100,
+      fxLate: Math.max(0, num(els.fxLate, 0)) / 100,
+      vol: Math.max(0.001, num(els.vol, defaultVol()) / 100)
     };
   }
 
@@ -623,71 +755,81 @@
   }
 
   function compute(i) {
-    var netApy = i.apy * (1 - i.tax);
-    var growth = Math.pow(1 + netApy, i.years);
-
-    // Everything expressed in March dollars.
-    var prepay = (i.amountJpy / i.rate0) * (1 + i.fxPre) * (1 - i.rewPre) * growth;
-    var laterFactor = (1 + i.fxLate) * (1 - i.rewLate); // cost = amountJpy / R * laterFactor
-    var costLater = function (R) { return (i.amountJpy / R) * laterFactor; };
-
-    // prepay = amountJpy / R* * laterFactor  →  R* = amountJpy * laterFactor / prepay
-    var breakeven = prepay > 0 ? (i.amountJpy * laterFactor) / prepay : i.rate0;
-
-    // Cushion: how far the yen must strengthen (rate falls) before prepaying wins.
+    var growth = Math.pow(1 + i.apy * (1 - i.tax), i.years);
+    var prepay = (i.amountLocal / i.rate0) * (1 + i.fxPre) * (1 - i.rewPre) * growth;
+    var laterFactor = (1 + i.fxLate) * (1 - i.rewLate);
+    var costLater = function (R) { return (i.amountLocal / R) * laterFactor; };
+    var breakeven = prepay > 0 ? (i.amountLocal * laterFactor) / prepay : i.rate0;
     var cushion = (i.rate0 - breakeven) / i.rate0;
-
     var sigma = i.vol * Math.sqrt(Math.max(i.years, 1e-6));
-    var oddsPrepay = Phi(Math.log(breakeven / i.rate0) / sigma);
-
     return {
-      inputs: i, growth: growth, netApy: netApy,
+      inputs: i, growth: growth,
       prepayCost: prepay, costLater: costLater,
-      atToday: costLater(i.rate0) - prepay, // > 0 → prepaying is cheaper
-      breakeven: breakeven, cushion: cushion, oddsPrepay: oddsPrepay
+      atToday: costLater(i.rate0) - prepay,
+      breakeven: breakeven, cushion: cushion,
+      oddsPrepay: Phi(Math.log(breakeven / i.rate0) / sigma)
     };
   }
 
-  /* ---------- render: verdict + tiles ---------- */
-  function renderHead(m) {
+  /* ---------- render: answer ---------- */
+  function renderAnswer(m) {
     var i = m.inputs;
     var adv = m.atToday;
     var prepayWins = adv > 0;
-    var side = prepayWins ? "prepay" : "wait";
+    var lc = i.local;
 
-    var v = $("verdict");
-    v.dataset.side = side;
-    $("verdictHead").textContent = prepayWins
-      ? "Prepay now"
-      : "Wait and pay in March";
+    $("verdict").dataset.side = prepayWins ? "prepay" : "wait";
+    $("verdictHead").textContent = prepayWins ? "Prepay now" : "Wait and pay later";
 
     var mag = Math.abs(adv);
     var share = m.prepayCost > 0 ? mag / m.prepayCost : 0;
     $("verdictSub").innerHTML = prepayWins
-      ? "If the rate is unchanged in March, prepaying leaves you <strong>" + money(mag) + "</strong> better off ("
-        + pct(share, 1) + " of the bill). It stays the better call unless the yen <strong>weakens</strong> past "
-        + rateStr(m.breakeven) + "."
-      : "If the rate is unchanged in March, waiting leaves you <strong>" + money(mag) + "</strong> better off ("
-        + pct(share, 1) + " of the bill) — the interest and points you'd give up outweigh the locked-in rate. "
-        + "Prepaying only wins if the yen <strong>strengthens</strong> past " + rateStr(m.breakeven) + ".";
-
-    $("beRate").textContent = rateStr(m.breakeven) + " / $1";
-    $("beNote").textContent = "Below this, prepaying wins. Above it, waiting wins. Today: " + rateStr(i.rate0) + ".";
+      ? "If the rate doesn't move, prepaying leaves you <strong>" + home(mag) + "</strong> better off — "
+        + pct(share, 1) + " of the bill. The points you earn now beat the interest you give up."
+      : "If the rate doesn't move, waiting leaves you <strong>" + home(mag) + "</strong> better off — "
+        + pct(share, 1) + " of the bill. The interest your money keeps earning beats what prepaying locks in.";
 
     var c = m.cushion;
-    $("cushion").textContent = (c >= 0 ? "" : "+") + pct(Math.abs(c), 2);
+    var far = Math.abs(c);
+    $("verdictSwing").innerHTML = i.days === 0
+      ? "You're paying today, so there's nothing to decide — the two are the same."
+      : (c >= 0
+        ? "For prepaying to win instead, <strong>" + lc + " would have to strengthen more than "
+          + pct(far, 1) + "</strong> against " + state.home + " before " + niceDate(els.payDate.value)
+          + " — from " + fmtRate(i.rate0) + " down to " + fmtRate(m.breakeven) + ". "
+        : "Waiting only wins if <strong>" + lc + " weakens more than " + pct(far, 1) + "</strong> against "
+          + state.home + " before " + niceDate(els.payDate.value)
+          + " — from " + fmtRate(i.rate0) + " up to " + fmtRate(m.breakeven) + ". ")
+        + "Rough odds of that: " + Math.round((c >= 0 ? m.oddsPrepay : 1 - m.oddsPrepay) * 100) + "%.";
+
+    $("beRate").textContent = fmtRate(m.breakeven);
+    $("beNote").textContent = "Below this, prepaying wins; above it, waiting does. " + rateLine(i.rate0) + " today.";
+
+    $("cushion").textContent = pct(far, 2);
     $("cushionNote").textContent = c >= 0
-      ? "The yen has to strengthen more than this before prepaying pays off."
-      : "The yen is already past break-even — prepaying is ahead by this much of a margin.";
+      ? lc + " has to strengthen more than this before prepaying pays off."
+      : lc + " has to weaken more than this before waiting pays off.";
 
     $("odds").textContent = Math.round(m.oddsPrepay * 100) + "%";
-    $("oddsNote").textContent = "Assuming a random walk from " + rateStr(i.rate0) + " at "
-      + (i.vol * 100).toFixed(0) + "% annual volatility over " + i.days + " days.";
+    $("oddsNote").textContent = "Random walk from today's rate at " + (i.vol * 100).toFixed(0)
+      + "% annual volatility over " + i.days + " days.";
 
     $("daysHint").textContent = i.days + " days away · " + (i.years * 12).toFixed(1) + " months";
-    $("amountHint").textContent = currency === "JPY"
-      ? "≈ " + money(i.amountJpy / i.rate0) + " at today's rate"
-      : "≈ " + jpy0.format(i.amountJpy) + " at today's rate";
+    $("amountHint").textContent = state.amountIn === "local"
+      ? "≈ " + home(i.amountLocal / i.rate0) + " at today's rate"
+      : "≈ " + fmtCur(i.amountLocal, lc, 0) + " at today's rate";
+    $("destHint").textContent = "They'll charge you in " + curName(lc) + " (" + lc + ")";
+    $("rulerLeft").textContent = "← stronger " + lc + " · costs more";
+    $("rulerRight").textContent = "weaker " + lc + " · costs less →";
+    $("tableNote").textContent = "All figures in " + state.home
+      + " on the payment date — the prepay column already includes the interest you'd forgo and the points you'd earn.";
+  }
+
+  function niceDate(v) {
+    var p = (v || "").split("-");
+    if (p.length !== 3) return "then";
+    var d = new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1);
+    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   }
 
   /* ---------- render: ruler ---------- */
@@ -695,8 +837,7 @@
     var i = m.inputs;
     var lo = i.rate0 * 0.90, hi = i.rate0 * 1.10;
     var pos = function (R) { return Math.max(0, Math.min(100, ((R - lo) / (hi - lo)) * 100)); };
-    var bePos = pos(m.breakeven);
-    var todayPos = pos(i.rate0);
+    var bePos = pos(m.breakeven), todayPos = pos(i.rate0);
 
     $("trackFill").style.background =
       "linear-gradient(90deg, var(--pre-fill) 0 " + bePos + "%, var(--wait-fill) " + bePos + "% 100%)";
@@ -705,15 +846,11 @@
 
     var rail = $("rail");
     rail.innerHTML = "";
-    var flags = [
-      { p: todayPos, k: "Today", v: rateStr(i.rate0), strong: true },
-      { p: bePos, k: "Break-even", v: rateStr(m.breakeven), strong: false }
-    ];
-    flags.forEach(function (f) {
+    [{ p: todayPos, k: "Today", v: fmtRate(i.rate0), strong: true },
+     { p: bePos, k: "Break-even", v: fmtRate(m.breakeven), strong: false }].forEach(function (f) {
       var d = document.createElement("div");
       d.className = "flag";
       d.style.left = f.p + "%";
-      // keep flags inside the rail at the edges
       d.style.transform = f.p > 75 ? "translateX(-100%)" : (f.p < 12 ? "none" : "translateX(-50%)");
       d.innerHTML = '<span class="k">' + f.k + '</span><span class="v" style="color:' +
         (f.strong ? "var(--ink)" : "var(--ink-2)") + '">' + f.v + "</span>";
@@ -723,7 +860,7 @@
 
   /* ---------- render: chart ---------- */
   var SVGNS = "http://www.w3.org/2000/svg";
-  var W = 760, H = 320, PAD = { t: 26, r: 20, b: 42, l: 68 };
+  var W = 760, H = 320, PAD = { t: 26, r: 20, b: 42, l: 74 };
   var chartState = null;
 
   // var() inside an SVG presentation attribute is not reliably substituted;
@@ -738,6 +875,24 @@
     }
     if (text !== undefined) n.textContent = text;
     return n;
+  }
+
+  // Axis ticks land on round steps, so drop the decimals unless the step needs them.
+  function axisTick(t) {
+    var d = Number.isInteger(t) ? 0 : undefined;
+    var s = fmtCur(Math.abs(t), state.home, d);
+    return t === 0 ? s : (t > 0 ? "+" : "−") + s;
+  }
+
+  function niceTicks(min, max, count) {
+    var raw = (max - min) / count;
+    if (!(raw > 0)) return [0];
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / mag;
+    var step = (norm >= 5 ? 10 : norm >= 2 ? 5 : norm >= 1 ? 2 : 1) * mag;
+    var out = [], t = Math.ceil(min / step) * step;
+    for (; t <= max + 1e-9 && out.length < 20; t += step) out.push(Math.abs(t) < step / 1e6 ? 0 : t);
+    return out;
   }
 
   function renderChart(m) {
@@ -769,38 +924,24 @@
     defs.appendChild(clipTop); defs.appendChild(clipBot);
     svg.appendChild(defs);
 
-    // y gridlines
-    var ticks = niceTicks(vMin, vMax, 5);
-    ticks.forEach(function (t) {
-      svg.appendChild(el("line", {
-        x1: PAD.l, x2: W - PAD.r, y1: y(t), y2: y(t),
-        stroke: "var(--hairline)", "stroke-width": 1
-      }));
+    niceTicks(vMin, vMax, 5).forEach(function (t) {
+      svg.appendChild(el("line", { x1: PAD.l, x2: W - PAD.r, y1: y(t), y2: y(t), stroke: "var(--hairline)", "stroke-width": 1 }));
       svg.appendChild(el("text", {
         x: PAD.l - 10, y: y(t) + 4, "text-anchor": "end",
         fill: "var(--muted)", "font-size": 11, "font-family": "var(--mono)"
-      }, (t >= 0 ? "+" : "−") + money(Math.abs(t))));
+      }, axisTick(t)));
     });
 
-    // area, split at zero
     var d = "M " + x(pts[0].R) + " " + y(pts[0].adv);
     for (var a = 1; a < pts.length; a++) d += " L " + x(pts[a].R) + " " + y(pts[a].adv);
     var area = d + " L " + x(pts[pts.length - 1].R) + " " + zeroY + " L " + x(pts[0].R) + " " + zeroY + " Z";
 
     svg.appendChild(el("path", { d: area, fill: "var(--pre-fill)", "clip-path": "url(#clipTop)" }));
     svg.appendChild(el("path", { d: area, fill: "var(--wait-fill)", "clip-path": "url(#clipBot)" }));
-
-    // zero baseline
-    svg.appendChild(el("line", {
-      x1: PAD.l, x2: W - PAD.r, y1: zeroY, y2: zeroY,
-      stroke: "var(--rule)", "stroke-width": 1.5
-    }));
-
-    // the curve, in two colors
+    svg.appendChild(el("line", { x1: PAD.l, x2: W - PAD.r, y1: zeroY, y2: zeroY, stroke: "var(--rule)", "stroke-width": 1.5 }));
     svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--pre)", "stroke-width": 2, "clip-path": "url(#clipTop)", "stroke-linecap": "round" }));
     svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--wait)", "stroke-width": 2, "clip-path": "url(#clipBot)", "stroke-linecap": "round" }));
 
-    // today marker
     if (i.rate0 >= lo && i.rate0 <= hi) {
       svg.appendChild(el("line", {
         x1: x(i.rate0), x2: x(i.rate0), y1: PAD.t, y2: H - PAD.b,
@@ -812,36 +953,28 @@
       }, "today"));
     }
 
-    // break-even dot
     if (m.breakeven >= lo && m.breakeven <= hi) {
-      svg.appendChild(el("circle", {
-        cx: x(m.breakeven), cy: zeroY, r: 5,
-        fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 2
-      }));
-      var anchor = x(m.breakeven) > W - 140 ? "end" : "start";
-      var dx = anchor === "end" ? -10 : 10;
+      svg.appendChild(el("circle", { cx: x(m.breakeven), cy: zeroY, r: 5, fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 2 }));
+      var anchor = x(m.breakeven) > W - 150 ? "end" : "start";
       svg.appendChild(el("text", {
-        x: x(m.breakeven) + dx, y: zeroY - 12, "text-anchor": anchor,
+        x: x(m.breakeven) + (anchor === "end" ? -10 : 10), y: zeroY - 12, "text-anchor": anchor,
         fill: "var(--ink)", "font-size": 11.5, "font-family": "var(--mono)"
-      }, "break-even " + rateStr(m.breakeven)));
+      }, "break-even " + fmtRate(m.breakeven)));
     }
 
-    // region labels, placed in the roomier half
-    var topRoom = zeroY - PAD.t, botRoom = (H - PAD.b) - zeroY;
-    if (topRoom > 34) {
+    if (zeroY - PAD.t > 34) {
       svg.appendChild(el("text", {
         x: PAD.l + 10, y: PAD.t + 18, fill: "var(--pre)",
         "font-size": 11.5, "font-family": "var(--mono)", "letter-spacing": ".06em"
       }, "PREPAYING AHEAD"));
     }
-    if (botRoom > 34) {
+    if ((H - PAD.b) - zeroY > 34) {
       svg.appendChild(el("text", {
         x: W - PAD.r - 10, y: H - PAD.b - 10, "text-anchor": "end", fill: "var(--wait)",
         "font-size": 11.5, "font-family": "var(--mono)", "letter-spacing": ".06em"
       }, "WAITING AHEAD"));
     }
 
-    // x axis
     svg.appendChild(el("line", { x1: PAD.l, x2: W - PAD.r, y1: H - PAD.b, y2: H - PAD.b, stroke: "var(--rule)", "stroke-width": 1 }));
     [-10, -5, 0, 5, 10].forEach(function (p) {
       var R = i.rate0 * (1 + p / 100);
@@ -849,48 +982,32 @@
       svg.appendChild(el("text", {
         x: x(R), y: H - PAD.b + 17, "text-anchor": "middle",
         fill: "var(--muted)", "font-size": 11, "font-family": "var(--mono)"
-      }, rateStr(R)));
+      }, fmtRate(R)));
     });
     svg.appendChild(el("text", {
       x: PAD.l, y: H - 6, fill: "var(--muted)", "font-size": 10.5,
       "font-family": "var(--mono)", "letter-spacing": ".08em"
-    }, "← STRONGER YEN"));
+    }, "← STRONGER " + i.local));
     svg.appendChild(el("text", {
       x: W - PAD.r, y: H - 6, "text-anchor": "end", fill: "var(--muted)", "font-size": 10.5,
       "font-family": "var(--mono)", "letter-spacing": ".08em"
-    }, "WEAKER YEN →"));
+    }, "WEAKER " + i.local + " →"));
 
-    // hover layer
-    var cross = el("line", {
-      x1: 0, x2: 0, y1: PAD.t, y2: H - PAD.b,
-      stroke: "var(--ink)", "stroke-width": 1, opacity: 0, id: "cross"
-    });
-    var dot = el("circle", { r: 4.5, fill: "var(--ink)", opacity: 0, id: "hoverDot" });
-    svg.appendChild(cross); svg.appendChild(dot);
-    var hit = el("rect", {
+    svg.appendChild(el("line", { x1: 0, x2: 0, y1: PAD.t, y2: H - PAD.b, stroke: "var(--ink)", "stroke-width": 1, opacity: 0, id: "cross" }));
+    svg.appendChild(el("circle", { r: 4.5, fill: "var(--ink)", opacity: 0, id: "hoverDot" }));
+    svg.appendChild(el("rect", {
       x: PAD.l, y: PAD.t, width: W - PAD.l - PAD.r, height: H - PAD.t - PAD.b,
       fill: "transparent", style: "cursor:crosshair"
-    });
-    svg.appendChild(hit);
+    }));
   }
 
-  function niceTicks(min, max, count) {
-    var raw = (max - min) / count;
-    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
-    var norm = raw / mag;
-    var step = (norm >= 5 ? 10 : norm >= 2 ? 5 : norm >= 1 ? 2 : 1) * mag;
-    var out = [], t = Math.ceil(min / step) * step;
-    for (; t <= max + 1e-9; t += step) out.push(Math.abs(t) < step / 1e6 ? 0 : t);
-    return out;
-  }
-
-  /* ---------- chart hover ---------- */
   function bindHover() {
     var svg = $("chart"), tip = $("tip"), wrap = svg.closest(".chart-wrap");
 
-    function move(ev) {
+    function show(ev) {
       if (!chartState) return;
       var box = svg.getBoundingClientRect();
+      if (!box.width) return;
       var sx = (ev.clientX - box.left) / box.width * W;
       if (sx < PAD.l || sx > W - PAD.r) return hide();
 
@@ -899,18 +1016,17 @@
       var px = chartState.x(R), py = chartState.y(adv);
 
       var cross = svg.querySelector("#cross"), dot = svg.querySelector("#hoverDot");
-      cross.setAttribute("x1", px); cross.setAttribute("x2", px);
-      cross.setAttribute("opacity", ".25");
+      cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("opacity", ".25");
       dot.setAttribute("cx", px); dot.setAttribute("cy", py);
       dot.style.fill = adv >= 0 ? "var(--pre)" : "var(--wait)";
       dot.setAttribute("opacity", "1");
 
       var shift = (R - chartState.m.inputs.rate0) / chartState.m.inputs.rate0;
       tip.innerHTML =
-        '<span class="t-rate">' + rateStr(R) + " / $1 · yen " +
-        (shift < 0 ? "stronger " : shift > 0 ? "weaker " : "") + pct(Math.abs(shift), 1) + "</span>" +
+        '<span class="t-rate">' + fmtRate(R) + " · " + chartState.m.inputs.local + " " +
+        (shift < 0 ? "stronger " : shift > 0 ? "weaker " : "flat ") + pct(Math.abs(shift), 1) + "</span>" +
         '<span class="t-val" style="color:' + (adv >= 0 ? "var(--pre)" : "var(--wait)") + '">' +
-        (adv >= 0 ? "Prepay ahead " : "Wait ahead ") + money(Math.abs(adv)) + "</span>";
+        (adv >= 0 ? "Prepay ahead " : "Wait ahead ") + home(Math.abs(adv)) + "</span>";
       tip.dataset.on = "1";
 
       var wb = wrap.getBoundingClientRect();
@@ -928,18 +1044,20 @@
       if (dot) dot.setAttribute("opacity", "0");
     }
 
-    svg.addEventListener("pointermove", move);
-    svg.addEventListener("pointerdown", move);
+    svg.addEventListener("pointermove", show);
+    svg.addEventListener("pointerdown", show);
     svg.addEventListener("pointerleave", hide);
   }
 
   /* ---------- render: table ---------- */
   function renderTable(m) {
     var i = m.inputs;
-    var moves = [-10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10];
-    var rows = moves.map(function (p) { return { p: p, R: i.rate0 * (1 + p / 100) }; });
-    var beMove = (m.breakeven - i.rate0) / i.rate0 * 100;
-    rows.push({ p: beMove, R: m.breakeven, be: true });
+    var bp = (m.breakeven - i.rate0) / i.rate0 * 100;
+    // Drop any fixed step that would sit on top of the break-even row.
+    var rows = [-10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10]
+      .filter(function (p) { return Math.abs(p - bp) > 0.4; })
+      .map(function (p) { return { p: p, R: i.rate0 * (1 + p / 100) }; });
+    rows.push({ p: bp, R: m.breakeven, be: true });
     rows.sort(function (a, b) { return a.R - b.R; });
 
     var body = $("tbody");
@@ -947,86 +1065,199 @@
     rows.forEach(function (r) {
       var later = m.costLater(r.R);
       var diff = later - m.prepayCost;
+      var tie = Math.abs(diff) < 0.5;
       var tr = document.createElement("tr");
       if (Math.abs(r.p) < 1e-9) tr.dataset.now = "1";
-      var word = r.be ? "break-even" : (r.p < 0 ? "stronger" : r.p > 0 ? "weaker" : "unchanged");
+      var word = r.be ? "break-even" : (Math.abs(r.p) < 1e-9 ? "today" : r.p < 0 ? "stronger" : "weaker");
       tr.innerHTML =
-        "<td>" + rateStr(r.R) + "</td>" +
+        "<td>" + fmtRate(r.R) + "</td>" +
         "<td>" + (Math.abs(r.p) < 1e-9 ? "—" : (r.p > 0 ? "+" : "−") + Math.abs(r.p).toFixed(1) + "%") +
-        ' <span class="chip ' + (r.p < 0 ? "wait" : "prepay") + '" style="background:transparent;color:var(--muted)">' + word + "</span></td>" +
-        "<td>" + money(later) + "</td>" +
-        "<td>" + money(m.prepayCost) + "</td>" +
-        "<td style=\"color:" + (Math.abs(diff) < 0.5 ? "var(--ink-2)" : diff > 0 ? "var(--pre)" : "var(--wait)") + '">' +
-          (Math.abs(diff) < 0.5 ? "—" : (diff > 0 ? "+" : "−") + money(Math.abs(diff))) + "</td>" +
-        "<td>" + (Math.abs(diff) < 0.5
-          ? '<span class="chip" style="color:var(--muted)">tie</span>'
-          : diff > 0
-            ? '<span class="chip prepay">prepay</span>'
-            : '<span class="chip wait">wait</span>') + "</td>";
+          ' <span class="chip flat">' + word + "</span></td>" +
+        "<td>" + home(later) + "</td>" +
+        "<td>" + home(m.prepayCost) + "</td>" +
+        '<td style="color:' + (tie ? "var(--ink-2)" : diff > 0 ? "var(--pre)" : "var(--wait)") + '">' +
+          (tie ? "—" : (diff > 0 ? "+" : "−") + home(Math.abs(diff))) + "</td>" +
+        "<td>" + (tie ? '<span class="chip flat">tie</span>'
+          : diff > 0 ? '<span class="chip prepay">prepay</span>'
+          : '<span class="chip wait">wait</span>') + "</td>";
       body.appendChild(tr);
     });
   }
 
+  /* ---------- rates: live refresh ---------- */
+  function renderRateBar(R) {
+    var when = ratesAsOf ? new Date(ratesAsOf) : null;
+    var whenStr = when && !isNaN(when) ? when.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "an earlier date";
+    $("rateDot").className = "dot " + (ratesLive ? "live" : "stale");
+    $("rateStatus").textContent = ratesLive
+      ? "Live rate, updated " + whenStr
+      : "Offline — rate from " + whenStr;
+    $("rateNow").textContent = rateLine(R);
+    $("rateReset").hidden = !state.rateTouched;
+    $("rateLabel").textContent = localCur() + " per 1 " + state.home;
+    $("rateHint").textContent = state.rateTouched ? "You've overridden the market rate" : "Filled in from the rate feed";
+    $("dataNote").innerHTML = "Rates from <a href=\"" + DATA.ratesUrl + "\">" + DATA.ratesSource +
+      "</a>, refreshed in your browser when the page can reach it. Country and currency data from the " +
+      "<a href=\"https://github.com/mledoze/countries\">mledoze/countries</a> dataset. " +
+      "The APY default is your currency's central bank policy rate as of " + DATA.policyAsOf +
+      " — a starting point, not what your account pays.";
+  }
+
+  function refreshRates() {
+    if (typeof fetch !== "function") return;
+    fetch(DATA.ratesUrl, { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || j.result !== "success" || !j.rates || j.base_code !== DATA.base) return;
+        rates = j.rates;
+        ratesAsOf = j.time_last_update_utc;
+        ratesLive = true;
+        if (!state.rateTouched) syncRate();
+        update();
+      })
+      .catch(function () { /* CSP-blocked or offline — the snapshot stands */ });
+  }
+
   /* ---------- wiring ---------- */
+  function syncRate() {
+    var R = pairRate(state.home, localCur());
+    if (R) els.rate.value = R >= 100 ? R.toFixed(2) : R.toFixed(4);
+  }
+
+  function syncDefaults() {
+    if (!state.apyTouched) els.apy.value = defaultApy();
+    if (!state.volTouched) els.vol.value = defaultVol();
+    $("apyHint").textContent = state.apyTouched
+      ? "Your number"
+      : "Benchmark for " + state.home + " — change it to what your account pays";
+    $("curLocal").textContent = localCur();
+    $("curHome").textContent = state.home;
+    els.amount.step = localCur() === "JPY" || localCur() === "KRW" || localCur() === "IDR" ? "1000" : "10";
+  }
+
+  function setAmountIn(which) {
+    if (state.amountIn === which) return;
+    var R = Math.max(1e-9, num(els.rate, 1));
+    var v = Math.max(0, num(els.amount, 0));
+    els.amount.value = which === "local" ? Math.round(v * R) : Math.round(v / R);
+    state.amountIn = which;
+    $("curLocal").setAttribute("aria-pressed", String(which === "local"));
+    $("curHome").setAttribute("aria-pressed", String(which === "home"));
+    update();
+  }
+
+  function update() {
+    var m = compute(readInputs());
+    renderRateBar(m.inputs.rate0);
+    renderAnswer(m);
+    if (!$("details").hidden) {
+      renderRuler(m);
+      renderChart(m);
+      renderTable(m);
+    } else {
+      chartState = { m: m, lo: 0, hi: 0, x: function () { return 0; }, y: function () { return 0; }, pts: [] };
+    }
+    save();
+  }
+
   function save() {
     try {
-      var s = { cur: currency };
-      for (var k in els) if (els.hasOwnProperty(k)) s[k] = els[k].value;
-      localStorage.setItem(STORE, JSON.stringify(s));
-    } catch (e) { /* private mode — fine */ }
+      localStorage.setItem(STORE, JSON.stringify({
+        state: state,
+        vals: Object.keys(els).reduce(function (o, k) { o[k] = els[k].value; return o; }, {})
+      }));
+    } catch (e) { /* private mode */ }
   }
 
   function load() {
     try {
       var s = JSON.parse(localStorage.getItem(STORE) || "null");
-      if (!s) return;
-      for (var k in els) if (els.hasOwnProperty(k) && s[k] !== undefined) els[k].value = s[k];
-      if (s.cur) setCurrency(s.cur, true);
-    } catch (e) { /* ignore */ }
+      if (!s || !s.state || !s.vals) return false;
+      Object.keys(s.state).forEach(function (k) { state[k] = s.state[k]; });
+      Object.keys(els).forEach(function (k) { if (s.vals[k] !== undefined) els[k].value = s.vals[k]; });
+      return true;
+    } catch (e) { return false; }
   }
 
-  function setCurrency(cur, quiet) {
-    currency = cur;
-    $("curJPY").setAttribute("aria-pressed", String(cur === "JPY"));
-    $("curUSD").setAttribute("aria-pressed", String(cur === "USD"));
-    els.amount.step = cur === "JPY" ? "1000" : "50";
-    if (!quiet) update();
+  function applyDefaults() {
+    state.dest = "JP";
+    state.home = detectHome();
+    state.amountIn = "local";
+    state.rateTouched = false;
+    state.apyTouched = false;
+    state.volTouched = false;
+    els.dest.value = state.dest;
+    els.home.value = state.home;
+    els.tax.value = 0; els.rewPre.value = 2; els.rewLate.value = 2;
+    els.fxPre.value = 0; els.fxLate.value = 0;
+    var d = new Date(); d.setMonth(d.getMonth() + 7);
+    els.payDate.value = d.toISOString().slice(0, 10);
+    syncRate();
+    syncDefaults();
+    var R = pairRate(state.home, localCur()) || 1;
+    els.amount.value = Math.round(2800 * R / 100) * 100; // a ~2,800-unit trip, rounded
+    $("curLocal").setAttribute("aria-pressed", "true");
+    $("curHome").setAttribute("aria-pressed", "false");
   }
 
-  function update() {
-    var m = compute(readInputs());
-    renderHead(m);
-    renderRuler(m);
-    renderChart(m);
-    renderTable(m);
-    save();
+  /* ---------- init ---------- */
+  buildDestOptions();
+  buildHomeOptions();
+  bindHover();
+  applyDefaults();
+  if (load()) {
+    els.dest.value = state.dest;
+    els.home.value = state.home;
+    $("curLocal").setAttribute("aria-pressed", String(state.amountIn === "local"));
+    $("curHome").setAttribute("aria-pressed", String(state.amountIn === "home"));
+    syncDefaults();
   }
 
-  Object.keys(els).forEach(function (k) {
+  els.dest.addEventListener("change", function () {
+    state.dest = els.dest.value;
+    state.amountIn = "local";
+    $("curLocal").setAttribute("aria-pressed", "true");
+    $("curHome").setAttribute("aria-pressed", "false");
+    state.rateTouched = false;
+    syncRate(); syncDefaults(); update();
+  });
+  els.home.addEventListener("change", function () {
+    state.home = els.home.value;
+    state.rateTouched = false;
+    state.apyTouched = false;
+    state.volTouched = false;
+    syncRate(); syncDefaults(); update();
+  });
+  els.rate.addEventListener("input", function () { state.rateTouched = true; update(); });
+  els.apy.addEventListener("input", function () { state.apyTouched = true; update(); });
+  els.vol.addEventListener("input", function () { state.volTouched = true; update(); });
+  ["amount", "payDate", "tax", "rewPre", "rewLate", "fxPre", "fxLate"].forEach(function (k) {
     els[k].addEventListener("input", update);
     els[k].addEventListener("change", update);
   });
-  $("curJPY").addEventListener("click", function () {
-    if (currency === "JPY") return;
-    var r = Math.max(1, num(els.rate, DEFAULTS.rate));
-    els.amount.value = Math.round(Math.max(0, num(els.amount, 0)) * r);
-    setCurrency("JPY");
+
+  $("curLocal").addEventListener("click", function () { setAmountIn("local"); });
+  $("curHome").addEventListener("click", function () { setAmountIn("home"); });
+  $("rateReset").addEventListener("click", function () {
+    state.rateTouched = false; syncRate(); update();
   });
-  $("curUSD").addEventListener("click", function () {
-    if (currency === "USD") return;
-    var r = Math.max(1, num(els.rate, DEFAULTS.rate));
-    els.amount.value = Math.round(Math.max(0, num(els.amount, 0)) / r);
-    setCurrency("USD");
-  });
-  $("reset").addEventListener("click", function () {
-    for (var k in els) if (els.hasOwnProperty(k)) els[k].value = DEFAULTS[k];
-    setCurrency(DEFAULTS.cur, true);
+  $("reset").addEventListener("click", function () { applyDefaults(); update(); });
+
+  function setDetails(open) {
+    $("details").hidden = !open;
+    var b = $("disclose");
+    b.setAttribute("aria-expanded", String(open));
+    b.textContent = open ? "Hide the details" : "Show the details";
     update();
+  }
+  $("disclose").addEventListener("click", function () { setDetails($("details").hidden); });
+  if (location.hash === "#details") setDetails(true);
+
+  window.addEventListener("resize", function () {
+    if (chartState && chartState.m && !$("details").hidden) renderChart(chartState.m);
   });
 
-  bindHover();
-  window.addEventListener("resize", function () { if (chartState) renderChart(chartState.m); });
-  load();
   update();
+  refreshRates();
 })();
 </script>
