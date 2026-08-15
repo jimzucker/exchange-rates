@@ -1,0 +1,1032 @@
+<title>Prepay or Wait — Japan trip currency calculator</title>
+
+<style>
+  :root {
+    color-scheme: light;
+    --page:      #eef0f4;
+    --surface:   #ffffff;
+    --surface-2: #f6f7fa;
+    --ink:       #0e1116;
+    --ink-2:     #4b5361;
+    --muted:     #828b9a;
+    --hairline:  #e3e6ec;
+    --rule:      #c9cfd9;
+    --pre:       #1f6ecb;
+    --wait:      #c23b3b;
+    --pre-fill:  rgba(31,110,203,.15);
+    --wait-fill: rgba(194,59,59,.15);
+    --pre-wash:  rgba(31,110,203,.08);
+    --wait-wash: rgba(194,59,59,.08);
+    --shadow:    0 1px 2px rgba(14,17,22,.05), 0 10px 30px rgba(14,17,22,.05);
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, "JetBrains Mono", "Roboto Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:      #0b0d11;
+      --surface:   #14171d;
+      --surface-2: #1a1e26;
+      --ink:       #eef1f6;
+      --ink-2:     #a6aebc;
+      --muted:     #6f7887;
+      --hairline:  #242932;
+      --rule:      #39404c;
+      --pre:       #4f97ee;
+      --wait:      #e66767;
+      --pre-fill:  rgba(79,151,238,.20);
+      --wait-fill: rgba(230,103,103,.20);
+      --pre-wash:  rgba(79,151,238,.10);
+      --wait-wash: rgba(230,103,103,.10);
+      --shadow:    0 1px 2px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:      #0b0d11;
+    --surface:   #14171d;
+    --surface-2: #1a1e26;
+    --ink:       #eef1f6;
+    --ink-2:     #a6aebc;
+    --muted:     #6f7887;
+    --hairline:  #242932;
+    --rule:      #39404c;
+    --pre:       #4f97ee;
+    --wait:      #e66767;
+    --pre-fill:  rgba(79,151,238,.20);
+    --wait-fill: rgba(230,103,103,.20);
+    --pre-wash:  rgba(79,151,238,.10);
+    --wait-wash: rgba(230,103,103,.10);
+    --shadow:    0 1px 2px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: clamp(1.25rem, 4vw, 3.25rem) clamp(1rem, 4vw, 2rem) 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1.25rem, 3vw, 2rem);
+  }
+
+  /* ---------- shared type roles ---------- */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- masthead ---------- */
+  .masthead { display: flex; flex-direction: column; gap: .625rem; }
+  .masthead h1 {
+    font-size: clamp(1.6rem, 4.2vw, 2.4rem);
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    font-weight: 640;
+    text-wrap: balance;
+    margin: 0;
+  }
+  .dek {
+    color: var(--ink-2);
+    max-width: 60ch;
+    font-size: .9375rem;
+    margin: 0;
+  }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: clamp(1rem, 3vw, 1.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .card > h2 {
+    font-size: .9375rem;
+    font-weight: 620;
+    letter-spacing: -.01em;
+    margin: 0;
+  }
+
+  /* ---------- verdict ---------- */
+  .verdict {
+    border-left: 3px solid var(--rule);
+    transition: border-color .2s ease;
+  }
+  .verdict[data-side="prepay"] { border-left-color: var(--pre); background: linear-gradient(90deg, var(--pre-wash), transparent 45%), var(--surface); }
+  .verdict[data-side="wait"]   { border-left-color: var(--wait); background: linear-gradient(90deg, var(--wait-wash), transparent 45%), var(--surface); }
+  .verdict-head {
+    font-size: clamp(1.5rem, 4.6vw, 2.125rem);
+    line-height: 1.12;
+    letter-spacing: -.025em;
+    font-weight: 660;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .verdict[data-side="prepay"] .verdict-head { color: var(--pre); }
+  .verdict[data-side="wait"]   .verdict-head { color: var(--wait); }
+  .verdict-sub { margin: 0; color: var(--ink-2); font-size: .9375rem; max-width: 56ch; }
+  .verdict-sub strong { color: var(--ink); font-weight: 620; }
+
+  /* ---------- stat tiles ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: .75rem;
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: .875rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+  }
+  .tile-value {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.625rem;
+    letter-spacing: -.02em;
+    line-height: 1.1;
+  }
+  .tile-note { font-size: .8125rem; color: var(--ink-2); }
+
+  /* ---------- rate ruler ---------- */
+  .ruler-ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .track {
+    position: relative;
+    height: 2.75rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+  }
+  .track-fill { position: absolute; inset: 0; }
+  .track-legend {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .track-legend.left  { left: .625rem; color: var(--pre); }
+  .track-legend.right { right: .625rem; color: var(--wait); }
+  .marker {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 2px;
+    transform: translateX(-1px);
+  }
+  .marker.today    { background: var(--ink); }
+  .marker.breakeven { background: var(--ink); opacity: .35; }
+  .marker.breakeven::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-left: 2px dashed var(--ink);
+  }
+  .marker-rail { position: relative; height: 2.5rem; }
+  .flag {
+    position: absolute;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    font-size: .75rem;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+  .flag .k {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .flag .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .875rem; }
+
+  /* ---------- controls ---------- */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: .875rem 1rem;
+  }
+  .field { display: flex; flex-direction: column; gap: .3rem; }
+  .field > label {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .field input, .field select {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: .5rem .625rem;
+    width: 100%;
+    min-width: 0;
+  }
+  .field input:focus-visible, .field select:focus-visible, .seg button:focus-visible, summary:focus-visible, .ghost:focus-visible {
+    outline: 2px solid var(--pre);
+    outline-offset: 2px;
+  }
+  .field .hint { font-size: .75rem; color: var(--muted); }
+  .amount-row { display: flex; gap: .5rem; align-items: stretch; }
+  .seg {
+    display: inline-flex;
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+    flex: 0 0 auto;
+  }
+  .seg button {
+    font-family: var(--mono);
+    font-size: .8125rem;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 0 .7rem;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }
+
+  details.adv { border-top: 1px solid var(--hairline); padding-top: .875rem; }
+  details.adv > summary {
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    list-style: none;
+  }
+  details.adv > summary::-webkit-details-marker { display: none; }
+  details.adv > summary::before { content: "+ "; }
+  details.adv[open] > summary::before { content: "− "; }
+  details.adv > .grid-2 { margin-top: .875rem; }
+
+  .ghost {
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: .6875rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--hairline);
+    border-radius: 7px;
+    padding: .35rem .6rem;
+    cursor: pointer;
+  }
+  .ghost:hover { color: var(--ink); border-color: var(--rule); }
+
+  /* ---------- chart ---------- */
+  .chart-wrap { position: relative; }
+  .chart-scroll { overflow-x: auto; }
+  svg.chart { display: block; width: 100%; height: auto; min-width: 21rem; touch-action: pan-y; }
+  .tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: .5rem .625rem;
+    font-size: .75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity .12s ease;
+    z-index: 3;
+  }
+  .tip[data-on="1"] { opacity: 1; }
+  .tip .t-rate { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .tip .t-val  { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: .9375rem; display: block; margin-top: .1rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .8125rem; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
+
+  /* ---------- table ---------- */
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .8125rem; min-width: 34rem; }
+  th, td { text-align: right; padding: .5rem .625rem; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th {
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom-color: var(--rule);
+  }
+  tbody td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  tbody tr[data-now="1"] td { background: var(--surface-2); }
+  tbody tr[data-now="1"] td:first-child::after { content: " ← today"; color: var(--muted); font-size: .6875rem; }
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: .625rem;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    padding: .1rem .4rem;
+    border-radius: 5px;
+  }
+  .chip.prepay { color: var(--pre); background: var(--pre-fill); }
+  .chip.wait   { color: var(--wait); background: var(--wait-fill); }
+
+  /* ---------- notes ---------- */
+  .notes { display: flex; flex-direction: column; gap: .875rem; }
+  .note { display: grid; grid-template-columns: 1.25rem 1fr; gap: .5rem; font-size: .875rem; color: var(--ink-2); }
+  .note .n {
+    font-family: var(--mono);
+    font-size: .6875rem;
+    color: var(--muted);
+    padding-top: .2rem;
+  }
+  .note b { color: var(--ink); font-weight: 620; }
+  footer { color: var(--muted); font-size: .75rem; border-top: 1px solid var(--hairline); padding-top: 1rem; }
+  footer code { font-family: var(--mono); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">¥ / $ &nbsp;·&nbsp; prepay vs. wait</p>
+    <h1>Prepay the trip now, or pay when you get there?</h1>
+    <p class="dek">
+      Prepaying locks in today's exchange rate and earns card points now. Waiting keeps your cash
+      earning interest — and leaves you exposed to whatever the yen does between now and your trip.
+      This puts both on the same footing and tells you how far the rate has to move before the
+      answer flips.
+    </p>
+  </header>
+
+  <section class="card verdict" id="verdict" data-side="wait" aria-live="polite">
+    <p class="eyebrow">The math says</p>
+    <p class="verdict-head" id="verdictHead">Wait and pay in March</p>
+    <p class="verdict-sub" id="verdictSub"></p>
+  </section>
+
+  <section class="stats">
+    <div class="tile">
+      <p class="eyebrow">Break-even rate</p>
+      <p class="tile-value" id="beRate">—</p>
+      <p class="tile-note" id="beNote"></p>
+    </div>
+    <div class="tile">
+      <p class="eyebrow">Your cushion</p>
+      <p class="tile-value" id="cushion">—</p>
+      <p class="tile-note" id="cushionNote"></p>
+    </div>
+    <div class="tile">
+      <p class="eyebrow">Rough odds prepaying wins</p>
+      <p class="tile-value" id="odds">—</p>
+      <p class="tile-note" id="oddsNote"></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Where today's rate sits</h2>
+    <div class="ruler-ends">
+      <span>← stronger yen · trip costs more</span>
+      <span>weaker yen · trip costs less →</span>
+    </div>
+    <div class="track">
+      <div class="track-fill" id="trackFill"></div>
+      <div class="track-legend left">Prepay wins</div>
+      <div class="track-legend right">Waiting wins</div>
+      <div class="marker breakeven" id="mkBreak"></div>
+      <div class="marker today" id="mkToday"></div>
+    </div>
+    <div class="marker-rail" id="rail"></div>
+  </section>
+
+  <section class="card">
+    <h2>Your numbers</h2>
+    <div class="grid-2">
+      <div class="field">
+        <label for="amount">What you'd prepay</label>
+        <div class="amount-row">
+          <input id="amount" type="number" inputmode="decimal" min="0" step="1000" value="450000">
+          <div class="seg" role="group" aria-label="Currency of the amount">
+            <button type="button" id="curJPY" aria-pressed="true">¥</button>
+            <button type="button" id="curUSD" aria-pressed="false">$</button>
+          </div>
+        </div>
+        <span class="hint" id="amountHint"></span>
+      </div>
+      <div class="field">
+        <label for="rate">Today's rate — ¥ per $1</label>
+        <input id="rate" type="number" inputmode="decimal" min="1" step="0.1" value="159.3">
+        <span class="hint">USD/JPY quote from your bank or card</span>
+      </div>
+      <div class="field">
+        <label for="payDate">You'd otherwise pay on</label>
+        <input id="payDate" type="date" value="2027-03-15">
+        <span class="hint" id="daysHint"></span>
+      </div>
+      <div class="field">
+        <label for="apy">Your cash earns — APY %</label>
+        <input id="apy" type="number" inputmode="decimal" min="0" step="0.05" value="4.0">
+        <span class="hint">Savings, T-bill, or money market</span>
+      </div>
+    </div>
+
+    <details class="adv">
+      <summary>Fine print — points, fees, tax, volatility</summary>
+      <div class="grid-2">
+        <div class="field">
+          <label for="rewPre">Card rewards if you prepay %</label>
+          <input id="rewPre" type="number" inputmode="decimal" min="0" step="0.25" value="2.0">
+        </div>
+        <div class="field">
+          <label for="rewLate">Card rewards in March %</label>
+          <input id="rewLate" type="number" inputmode="decimal" min="0" step="0.25" value="2.0">
+          <span class="hint">Set to 0 if you'd pay cash there</span>
+        </div>
+        <div class="field">
+          <label for="fxPre">Foreign txn fee, prepay %</label>
+          <input id="fxPre" type="number" inputmode="decimal" min="0" step="0.25" value="0">
+        </div>
+        <div class="field">
+          <label for="fxLate">Foreign txn fee, March %</label>
+          <input id="fxLate" type="number" inputmode="decimal" min="0" step="0.25" value="0">
+        </div>
+        <div class="field">
+          <label for="tax">Tax on interest %</label>
+          <input id="tax" type="number" inputmode="decimal" min="0" max="60" step="1" value="0">
+          <span class="hint">Interest is taxable; points usually aren't</span>
+        </div>
+        <div class="field">
+          <label for="vol">Yen volatility, annual %</label>
+          <input id="vol" type="number" inputmode="decimal" min="1" max="40" step="0.5" value="10">
+          <span class="hint">USD/JPY has run near 10%</span>
+        </div>
+      </div>
+    </details>
+
+    <button type="button" class="ghost" id="reset">Reset to defaults</button>
+  </section>
+
+  <section class="card">
+    <h2>What you gain or lose by prepaying, at every March rate</h2>
+    <div class="chart-wrap">
+      <div class="chart-scroll">
+        <svg class="chart" id="chart" viewBox="0 0 760 320" role="img" aria-labelledby="chartTitle">
+          <title id="chartTitle">Advantage of prepaying, in March dollars, across a range of March exchange rates</title>
+        </svg>
+      </div>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--pre)"></i> Prepaying comes out ahead</span>
+      <span><i class="swatch" style="background:var(--wait)"></i> Waiting comes out ahead</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>The same thing as a table</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">March rate</th>
+            <th scope="col">Yen move</th>
+            <th scope="col">Cost if you wait</th>
+            <th scope="col">Cost if you prepay</th>
+            <th scope="col">Difference</th>
+            <th scope="col">Better</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="tile-note">All figures are March dollars — the prepay column already includes the interest you'd forgo and the points you'd earn.</p>
+  </section>
+
+  <section class="card notes">
+    <h2>What the math can't price</h2>
+    <div class="note"><span class="n">01</span><p><b>Refundability.</b> A prepaid rate is usually non-refundable or penalty-heavy. If the trip could change, that flexibility is worth real money the calculator above doesn't see.</p></div>
+    <div class="note"><span class="n">02</span><p><b>Chargeback leverage.</b> Paying at the counter in March keeps your card dispute rights close to the stay. Prepaying seven months out means a dispute window that may close before you travel.</p></div>
+    <div class="note"><span class="n">03</span><p><b>Prepay discounts.</b> Many hotels shave 5–15% off for prepaid, non-refundable bookings. If yours does, that discount usually swamps everything modeled here — enter the discounted amount and compare.</p></div>
+    <div class="note"><span class="n">04</span><p><b>Point value.</b> The rewards fields assume points are worth about a cent each. If you redeem for outsized value — or if the spend triggers a sign-up bonus — prepaying is worth more than shown.</p></div>
+    <div class="note"><span class="n">05</span><p><b>The odds are a model, not a forecast.</b> They assume the rate wanders randomly from today's level with no drift. Nobody knows where USD/JPY lands in March.</p></div>
+  </section>
+
+  <footer>
+    <p>Break-even rate <code>R* = R₀ × (1+fee_late)(1−rew_late) ÷ [(1+fee_pre)(1−rew_pre) × (1+r)^t]</code>, where <code>R</code> is yen per dollar, <code>r</code> is your after-tax yield and <code>t</code> is years until the payment date. Everything is compared in March dollars. Not financial advice.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var DEFAULTS = {
+    amount: 450000, cur: "JPY", rate: 159.3, payDate: "2027-03-15",
+    apy: 4.0, rewPre: 2.0, rewLate: 2.0, fxPre: 0, fxLate: 0, tax: 0, vol: 10
+  };
+  var STORE = "prepay-or-wait/v1";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    amount: $("amount"), rate: $("rate"), payDate: $("payDate"), apy: $("apy"),
+    rewPre: $("rewPre"), rewLate: $("rewLate"), fxPre: $("fxPre"), fxLate: $("fxLate"),
+    tax: $("tax"), vol: $("vol")
+  };
+  var currency = DEFAULTS.cur;
+
+  /* ---------- formatting ---------- */
+  var usd0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  var usd2 = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var jpy0 = new Intl.NumberFormat("en-US", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
+  function money(v) { return Math.abs(v) >= 1000 ? usd0.format(v) : usd2.format(v); }
+  function rateStr(v) { return "¥" + v.toFixed(1); }
+  function pct(v, d) { return (v * 100).toFixed(d === undefined ? 2 : d) + "%"; }
+
+  /* ---------- math ---------- */
+  function num(el, fallback) {
+    var v = parseFloat(el.value);
+    return isFinite(v) ? v : fallback;
+  }
+
+  function readInputs() {
+    var rate = Math.max(1, num(els.rate, DEFAULTS.rate));
+    var raw = Math.max(0, num(els.amount, DEFAULTS.amount));
+    var amountJpy = currency === "JPY" ? raw : raw * rate;
+
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var parts = (els.payDate.value || DEFAULTS.payDate).split("-");
+    var pay = new Date(+parts[0], (+parts[1] || 1) - 1, +parts[2] || 1);
+    var days = Math.max(0, Math.round((pay - today) / 86400000));
+
+    return {
+      amountJpy: amountJpy,
+      rate0: rate,
+      days: days,
+      years: days / 365,
+      apy: Math.max(0, num(els.apy, DEFAULTS.apy)) / 100,
+      tax: Math.min(0.6, Math.max(0, num(els.tax, DEFAULTS.tax))) / 100,
+      rewPre: Math.max(0, num(els.rewPre, DEFAULTS.rewPre)) / 100,
+      rewLate: Math.max(0, num(els.rewLate, DEFAULTS.rewLate)) / 100,
+      fxPre: Math.max(0, num(els.fxPre, DEFAULTS.fxPre)) / 100,
+      fxLate: Math.max(0, num(els.fxLate, DEFAULTS.fxLate)) / 100,
+      vol: Math.max(0.01, num(els.vol, DEFAULTS.vol) / 100)
+    };
+  }
+
+  // Normal CDF (Abramowitz & Stegun 26.2.17)
+  function Phi(z) {
+    var t = 1 / (1 + 0.2316419 * Math.abs(z));
+    var d = 0.3989422804014327 * Math.exp(-z * z / 2);
+    var p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+    return z > 0 ? 1 - p : p;
+  }
+
+  function compute(i) {
+    var netApy = i.apy * (1 - i.tax);
+    var growth = Math.pow(1 + netApy, i.years);
+
+    // Everything expressed in March dollars.
+    var prepay = (i.amountJpy / i.rate0) * (1 + i.fxPre) * (1 - i.rewPre) * growth;
+    var laterFactor = (1 + i.fxLate) * (1 - i.rewLate); // cost = amountJpy / R * laterFactor
+    var costLater = function (R) { return (i.amountJpy / R) * laterFactor; };
+
+    // prepay = amountJpy / R* * laterFactor  →  R* = amountJpy * laterFactor / prepay
+    var breakeven = prepay > 0 ? (i.amountJpy * laterFactor) / prepay : i.rate0;
+
+    // Cushion: how far the yen must strengthen (rate falls) before prepaying wins.
+    var cushion = (i.rate0 - breakeven) / i.rate0;
+
+    var sigma = i.vol * Math.sqrt(Math.max(i.years, 1e-6));
+    var oddsPrepay = Phi(Math.log(breakeven / i.rate0) / sigma);
+
+    return {
+      inputs: i, growth: growth, netApy: netApy,
+      prepayCost: prepay, costLater: costLater,
+      atToday: costLater(i.rate0) - prepay, // > 0 → prepaying is cheaper
+      breakeven: breakeven, cushion: cushion, oddsPrepay: oddsPrepay
+    };
+  }
+
+  /* ---------- render: verdict + tiles ---------- */
+  function renderHead(m) {
+    var i = m.inputs;
+    var adv = m.atToday;
+    var prepayWins = adv > 0;
+    var side = prepayWins ? "prepay" : "wait";
+
+    var v = $("verdict");
+    v.dataset.side = side;
+    $("verdictHead").textContent = prepayWins
+      ? "Prepay now"
+      : "Wait and pay in March";
+
+    var mag = Math.abs(adv);
+    var share = m.prepayCost > 0 ? mag / m.prepayCost : 0;
+    $("verdictSub").innerHTML = prepayWins
+      ? "If the rate is unchanged in March, prepaying leaves you <strong>" + money(mag) + "</strong> better off ("
+        + pct(share, 1) + " of the bill). It stays the better call unless the yen <strong>weakens</strong> past "
+        + rateStr(m.breakeven) + "."
+      : "If the rate is unchanged in March, waiting leaves you <strong>" + money(mag) + "</strong> better off ("
+        + pct(share, 1) + " of the bill) — the interest and points you'd give up outweigh the locked-in rate. "
+        + "Prepaying only wins if the yen <strong>strengthens</strong> past " + rateStr(m.breakeven) + ".";
+
+    $("beRate").textContent = rateStr(m.breakeven) + " / $1";
+    $("beNote").textContent = "Below this, prepaying wins. Above it, waiting wins. Today: " + rateStr(i.rate0) + ".";
+
+    var c = m.cushion;
+    $("cushion").textContent = (c >= 0 ? "" : "+") + pct(Math.abs(c), 2);
+    $("cushionNote").textContent = c >= 0
+      ? "The yen has to strengthen more than this before prepaying pays off."
+      : "The yen is already past break-even — prepaying is ahead by this much of a margin.";
+
+    $("odds").textContent = Math.round(m.oddsPrepay * 100) + "%";
+    $("oddsNote").textContent = "Assuming a random walk from " + rateStr(i.rate0) + " at "
+      + (i.vol * 100).toFixed(0) + "% annual volatility over " + i.days + " days.";
+
+    $("daysHint").textContent = i.days + " days away · " + (i.years * 12).toFixed(1) + " months";
+    $("amountHint").textContent = currency === "JPY"
+      ? "≈ " + money(i.amountJpy / i.rate0) + " at today's rate"
+      : "≈ " + jpy0.format(i.amountJpy) + " at today's rate";
+  }
+
+  /* ---------- render: ruler ---------- */
+  function renderRuler(m) {
+    var i = m.inputs;
+    var lo = i.rate0 * 0.90, hi = i.rate0 * 1.10;
+    var pos = function (R) { return Math.max(0, Math.min(100, ((R - lo) / (hi - lo)) * 100)); };
+    var bePos = pos(m.breakeven);
+    var todayPos = pos(i.rate0);
+
+    $("trackFill").style.background =
+      "linear-gradient(90deg, var(--pre-fill) 0 " + bePos + "%, var(--wait-fill) " + bePos + "% 100%)";
+    $("mkBreak").style.left = bePos + "%";
+    $("mkToday").style.left = todayPos + "%";
+
+    var rail = $("rail");
+    rail.innerHTML = "";
+    var flags = [
+      { p: todayPos, k: "Today", v: rateStr(i.rate0), strong: true },
+      { p: bePos, k: "Break-even", v: rateStr(m.breakeven), strong: false }
+    ];
+    flags.forEach(function (f) {
+      var d = document.createElement("div");
+      d.className = "flag";
+      d.style.left = f.p + "%";
+      // keep flags inside the rail at the edges
+      d.style.transform = f.p > 75 ? "translateX(-100%)" : (f.p < 12 ? "none" : "translateX(-50%)");
+      d.innerHTML = '<span class="k">' + f.k + '</span><span class="v" style="color:' +
+        (f.strong ? "var(--ink)" : "var(--ink-2)") + '">' + f.v + "</span>";
+      rail.appendChild(d);
+    });
+  }
+
+  /* ---------- render: chart ---------- */
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var W = 760, H = 320, PAD = { t: 26, r: 20, b: 42, l: 68 };
+  var chartState = null;
+
+  // var() inside an SVG presentation attribute is not reliably substituted;
+  // anything referencing a token goes through the style property instead.
+  function el(name, attrs, text) {
+    var n = document.createElementNS(SVGNS, name);
+    for (var k in attrs) {
+      if (!attrs.hasOwnProperty(k)) continue;
+      var v = attrs[k];
+      if (typeof v === "string" && v.indexOf("var(") !== -1) n.style.setProperty(k, v);
+      else n.setAttribute(k, v);
+    }
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function renderChart(m) {
+    var i = m.inputs;
+    var svg = $("chart");
+    while (svg.childNodes.length > 1) svg.removeChild(svg.lastChild);
+
+    var lo = i.rate0 * 0.88, hi = i.rate0 * 1.12;
+    var N = 160, pts = [];
+    for (var k = 0; k <= N; k++) {
+      var R = lo + (hi - lo) * (k / N);
+      pts.push({ R: R, adv: m.costLater(R) - m.prepayCost });
+    }
+    var vals = pts.map(function (p) { return p.adv; });
+    var vMin = Math.min.apply(null, vals), vMax = Math.max.apply(null, vals);
+    var span = Math.max(vMax - vMin, 1);
+    vMin -= span * 0.10; vMax += span * 0.10;
+
+    var x = function (R) { return PAD.l + (R - lo) / (hi - lo) * (W - PAD.l - PAD.r); };
+    var y = function (v) { return PAD.t + (vMax - v) / (vMax - vMin) * (H - PAD.t - PAD.b); };
+    var zeroY = y(0);
+    chartState = { lo: lo, hi: hi, x: x, y: y, m: m, pts: pts };
+
+    var defs = el("defs");
+    var clipTop = el("clipPath", { id: "clipTop" });
+    clipTop.appendChild(el("rect", { x: PAD.l, y: PAD.t, width: W - PAD.l - PAD.r, height: Math.max(0, zeroY - PAD.t) }));
+    var clipBot = el("clipPath", { id: "clipBot" });
+    clipBot.appendChild(el("rect", { x: PAD.l, y: zeroY, width: W - PAD.l - PAD.r, height: Math.max(0, H - PAD.b - zeroY) }));
+    defs.appendChild(clipTop); defs.appendChild(clipBot);
+    svg.appendChild(defs);
+
+    // y gridlines
+    var ticks = niceTicks(vMin, vMax, 5);
+    ticks.forEach(function (t) {
+      svg.appendChild(el("line", {
+        x1: PAD.l, x2: W - PAD.r, y1: y(t), y2: y(t),
+        stroke: "var(--hairline)", "stroke-width": 1
+      }));
+      svg.appendChild(el("text", {
+        x: PAD.l - 10, y: y(t) + 4, "text-anchor": "end",
+        fill: "var(--muted)", "font-size": 11, "font-family": "var(--mono)"
+      }, (t >= 0 ? "+" : "−") + money(Math.abs(t))));
+    });
+
+    // area, split at zero
+    var d = "M " + x(pts[0].R) + " " + y(pts[0].adv);
+    for (var a = 1; a < pts.length; a++) d += " L " + x(pts[a].R) + " " + y(pts[a].adv);
+    var area = d + " L " + x(pts[pts.length - 1].R) + " " + zeroY + " L " + x(pts[0].R) + " " + zeroY + " Z";
+
+    svg.appendChild(el("path", { d: area, fill: "var(--pre-fill)", "clip-path": "url(#clipTop)" }));
+    svg.appendChild(el("path", { d: area, fill: "var(--wait-fill)", "clip-path": "url(#clipBot)" }));
+
+    // zero baseline
+    svg.appendChild(el("line", {
+      x1: PAD.l, x2: W - PAD.r, y1: zeroY, y2: zeroY,
+      stroke: "var(--rule)", "stroke-width": 1.5
+    }));
+
+    // the curve, in two colors
+    svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--pre)", "stroke-width": 2, "clip-path": "url(#clipTop)", "stroke-linecap": "round" }));
+    svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--wait)", "stroke-width": 2, "clip-path": "url(#clipBot)", "stroke-linecap": "round" }));
+
+    // today marker
+    if (i.rate0 >= lo && i.rate0 <= hi) {
+      svg.appendChild(el("line", {
+        x1: x(i.rate0), x2: x(i.rate0), y1: PAD.t, y2: H - PAD.b,
+        stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "2 4", opacity: .45
+      }));
+      svg.appendChild(el("text", {
+        x: x(i.rate0), y: PAD.t - 9, "text-anchor": "middle",
+        fill: "var(--ink-2)", "font-size": 11, "font-family": "var(--mono)"
+      }, "today"));
+    }
+
+    // break-even dot
+    if (m.breakeven >= lo && m.breakeven <= hi) {
+      svg.appendChild(el("circle", {
+        cx: x(m.breakeven), cy: zeroY, r: 5,
+        fill: "var(--surface)", stroke: "var(--ink)", "stroke-width": 2
+      }));
+      var anchor = x(m.breakeven) > W - 140 ? "end" : "start";
+      var dx = anchor === "end" ? -10 : 10;
+      svg.appendChild(el("text", {
+        x: x(m.breakeven) + dx, y: zeroY - 12, "text-anchor": anchor,
+        fill: "var(--ink)", "font-size": 11.5, "font-family": "var(--mono)"
+      }, "break-even " + rateStr(m.breakeven)));
+    }
+
+    // region labels, placed in the roomier half
+    var topRoom = zeroY - PAD.t, botRoom = (H - PAD.b) - zeroY;
+    if (topRoom > 34) {
+      svg.appendChild(el("text", {
+        x: PAD.l + 10, y: PAD.t + 18, fill: "var(--pre)",
+        "font-size": 11.5, "font-family": "var(--mono)", "letter-spacing": ".06em"
+      }, "PREPAYING AHEAD"));
+    }
+    if (botRoom > 34) {
+      svg.appendChild(el("text", {
+        x: W - PAD.r - 10, y: H - PAD.b - 10, "text-anchor": "end", fill: "var(--wait)",
+        "font-size": 11.5, "font-family": "var(--mono)", "letter-spacing": ".06em"
+      }, "WAITING AHEAD"));
+    }
+
+    // x axis
+    svg.appendChild(el("line", { x1: PAD.l, x2: W - PAD.r, y1: H - PAD.b, y2: H - PAD.b, stroke: "var(--rule)", "stroke-width": 1 }));
+    [-10, -5, 0, 5, 10].forEach(function (p) {
+      var R = i.rate0 * (1 + p / 100);
+      if (R < lo || R > hi) return;
+      svg.appendChild(el("text", {
+        x: x(R), y: H - PAD.b + 17, "text-anchor": "middle",
+        fill: "var(--muted)", "font-size": 11, "font-family": "var(--mono)"
+      }, rateStr(R)));
+    });
+    svg.appendChild(el("text", {
+      x: PAD.l, y: H - 6, fill: "var(--muted)", "font-size": 10.5,
+      "font-family": "var(--mono)", "letter-spacing": ".08em"
+    }, "← STRONGER YEN"));
+    svg.appendChild(el("text", {
+      x: W - PAD.r, y: H - 6, "text-anchor": "end", fill: "var(--muted)", "font-size": 10.5,
+      "font-family": "var(--mono)", "letter-spacing": ".08em"
+    }, "WEAKER YEN →"));
+
+    // hover layer
+    var cross = el("line", {
+      x1: 0, x2: 0, y1: PAD.t, y2: H - PAD.b,
+      stroke: "var(--ink)", "stroke-width": 1, opacity: 0, id: "cross"
+    });
+    var dot = el("circle", { r: 4.5, fill: "var(--ink)", opacity: 0, id: "hoverDot" });
+    svg.appendChild(cross); svg.appendChild(dot);
+    var hit = el("rect", {
+      x: PAD.l, y: PAD.t, width: W - PAD.l - PAD.r, height: H - PAD.t - PAD.b,
+      fill: "transparent", style: "cursor:crosshair"
+    });
+    svg.appendChild(hit);
+  }
+
+  function niceTicks(min, max, count) {
+    var raw = (max - min) / count;
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / mag;
+    var step = (norm >= 5 ? 10 : norm >= 2 ? 5 : norm >= 1 ? 2 : 1) * mag;
+    var out = [], t = Math.ceil(min / step) * step;
+    for (; t <= max + 1e-9; t += step) out.push(Math.abs(t) < step / 1e6 ? 0 : t);
+    return out;
+  }
+
+  /* ---------- chart hover ---------- */
+  function bindHover() {
+    var svg = $("chart"), tip = $("tip"), wrap = svg.closest(".chart-wrap");
+
+    function move(ev) {
+      if (!chartState) return;
+      var box = svg.getBoundingClientRect();
+      var sx = (ev.clientX - box.left) / box.width * W;
+      if (sx < PAD.l || sx > W - PAD.r) return hide();
+
+      var R = chartState.lo + (sx - PAD.l) / (W - PAD.l - PAD.r) * (chartState.hi - chartState.lo);
+      var adv = chartState.m.costLater(R) - chartState.m.prepayCost;
+      var px = chartState.x(R), py = chartState.y(adv);
+
+      var cross = svg.querySelector("#cross"), dot = svg.querySelector("#hoverDot");
+      cross.setAttribute("x1", px); cross.setAttribute("x2", px);
+      cross.setAttribute("opacity", ".25");
+      dot.setAttribute("cx", px); dot.setAttribute("cy", py);
+      dot.style.fill = adv >= 0 ? "var(--pre)" : "var(--wait)";
+      dot.setAttribute("opacity", "1");
+
+      var shift = (R - chartState.m.inputs.rate0) / chartState.m.inputs.rate0;
+      tip.innerHTML =
+        '<span class="t-rate">' + rateStr(R) + " / $1 · yen " +
+        (shift < 0 ? "stronger " : shift > 0 ? "weaker " : "") + pct(Math.abs(shift), 1) + "</span>" +
+        '<span class="t-val" style="color:' + (adv >= 0 ? "var(--pre)" : "var(--wait)") + '">' +
+        (adv >= 0 ? "Prepay ahead " : "Wait ahead ") + money(Math.abs(adv)) + "</span>";
+      tip.dataset.on = "1";
+
+      var wb = wrap.getBoundingClientRect();
+      var left = (px / W) * box.width + (box.left - wb.left);
+      var top = (py / H) * box.height + (box.top - wb.top);
+      var tw = tip.offsetWidth || 180;
+      tip.style.left = Math.max(0, Math.min(wb.width - tw, left - tw / 2)) + "px";
+      tip.style.top = Math.max(0, top - tip.offsetHeight - 14) + "px";
+    }
+
+    function hide() {
+      tip.dataset.on = "0";
+      var cross = svg.querySelector("#cross"), dot = svg.querySelector("#hoverDot");
+      if (cross) cross.setAttribute("opacity", "0");
+      if (dot) dot.setAttribute("opacity", "0");
+    }
+
+    svg.addEventListener("pointermove", move);
+    svg.addEventListener("pointerdown", move);
+    svg.addEventListener("pointerleave", hide);
+  }
+
+  /* ---------- render: table ---------- */
+  function renderTable(m) {
+    var i = m.inputs;
+    var moves = [-10, -7.5, -5, -2.5, 0, 2.5, 5, 7.5, 10];
+    var rows = moves.map(function (p) { return { p: p, R: i.rate0 * (1 + p / 100) }; });
+    var beMove = (m.breakeven - i.rate0) / i.rate0 * 100;
+    rows.push({ p: beMove, R: m.breakeven, be: true });
+    rows.sort(function (a, b) { return a.R - b.R; });
+
+    var body = $("tbody");
+    body.innerHTML = "";
+    rows.forEach(function (r) {
+      var later = m.costLater(r.R);
+      var diff = later - m.prepayCost;
+      var tr = document.createElement("tr");
+      if (Math.abs(r.p) < 1e-9) tr.dataset.now = "1";
+      var word = r.be ? "break-even" : (r.p < 0 ? "stronger" : r.p > 0 ? "weaker" : "unchanged");
+      tr.innerHTML =
+        "<td>" + rateStr(r.R) + "</td>" +
+        "<td>" + (Math.abs(r.p) < 1e-9 ? "—" : (r.p > 0 ? "+" : "−") + Math.abs(r.p).toFixed(1) + "%") +
+        ' <span class="chip ' + (r.p < 0 ? "wait" : "prepay") + '" style="background:transparent;color:var(--muted)">' + word + "</span></td>" +
+        "<td>" + money(later) + "</td>" +
+        "<td>" + money(m.prepayCost) + "</td>" +
+        "<td style=\"color:" + (Math.abs(diff) < 0.5 ? "var(--ink-2)" : diff > 0 ? "var(--pre)" : "var(--wait)") + '">' +
+          (Math.abs(diff) < 0.5 ? "—" : (diff > 0 ? "+" : "−") + money(Math.abs(diff))) + "</td>" +
+        "<td>" + (Math.abs(diff) < 0.5
+          ? '<span class="chip" style="color:var(--muted)">tie</span>'
+          : diff > 0
+            ? '<span class="chip prepay">prepay</span>'
+            : '<span class="chip wait">wait</span>') + "</td>";
+      body.appendChild(tr);
+    });
+  }
+
+  /* ---------- wiring ---------- */
+  function save() {
+    try {
+      var s = { cur: currency };
+      for (var k in els) if (els.hasOwnProperty(k)) s[k] = els[k].value;
+      localStorage.setItem(STORE, JSON.stringify(s));
+    } catch (e) { /* private mode — fine */ }
+  }
+
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(STORE) || "null");
+      if (!s) return;
+      for (var k in els) if (els.hasOwnProperty(k) && s[k] !== undefined) els[k].value = s[k];
+      if (s.cur) setCurrency(s.cur, true);
+    } catch (e) { /* ignore */ }
+  }
+
+  function setCurrency(cur, quiet) {
+    currency = cur;
+    $("curJPY").setAttribute("aria-pressed", String(cur === "JPY"));
+    $("curUSD").setAttribute("aria-pressed", String(cur === "USD"));
+    els.amount.step = cur === "JPY" ? "1000" : "50";
+    if (!quiet) update();
+  }
+
+  function update() {
+    var m = compute(readInputs());
+    renderHead(m);
+    renderRuler(m);
+    renderChart(m);
+    renderTable(m);
+    save();
+  }
+
+  Object.keys(els).forEach(function (k) {
+    els[k].addEventListener("input", update);
+    els[k].addEventListener("change", update);
+  });
+  $("curJPY").addEventListener("click", function () {
+    if (currency === "JPY") return;
+    var r = Math.max(1, num(els.rate, DEFAULTS.rate));
+    els.amount.value = Math.round(Math.max(0, num(els.amount, 0)) * r);
+    setCurrency("JPY");
+  });
+  $("curUSD").addEventListener("click", function () {
+    if (currency === "USD") return;
+    var r = Math.max(1, num(els.rate, DEFAULTS.rate));
+    els.amount.value = Math.round(Math.max(0, num(els.amount, 0)) / r);
+    setCurrency("USD");
+  });
+  $("reset").addEventListener("click", function () {
+    for (var k in els) if (els.hasOwnProperty(k)) els[k].value = DEFAULTS[k];
+    setCurrency(DEFAULTS.cur, true);
+    update();
+  });
+
+  bindHover();
+  window.addEventListener("resize", function () { if (chartState) renderChart(chartState.m); });
+  load();
+  update();
+})();
+</script>
