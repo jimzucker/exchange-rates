@@ -4,7 +4,10 @@ _2026-08-15_
 
 ## Prompt
 
-> Yes but I would like the app to go and and pull the current exchange rate so people
+The friend's feedback on the first version, passed through as the second prompt. Typos
+corrected; wording and substance otherwise unchanged.
+
+> Yes but I would like the app to go and pull the current exchange rate so people
 > don't have to do too much work
 >
 > Very cool. I think people would find this app useful because they're not knowledgeable
