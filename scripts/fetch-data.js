@@ -19,13 +19,23 @@ const RATES_URL = "https://open.er-api.com/v6/latest/USD";
 
 // Central bank policy rates, used as the starting guess for "what your cash earns".
 // A benchmark, not a savings-account APY — the app says so and the field is editable.
-// Source: unirateapi.com/central-bank-rates, table dated 2026-04-20.
+//
+// HAND-MAINTAINED. No free keyless feed exists for these, so the weekly rate-refresh
+// workflow does not touch them. Re-verify against two independent sources and bump
+// POLICY_AS_OF when you do.
+//
+// Verified 2026-08-15 against cbrates.com (updated 2026-08-11) and
+// tradingeconomics.com/country-list/interest-rate, which agreed on every overlapping
+// entry. Spot-checked: USD against the FOMC statement of 2026-07-29 (target range
+// 3.50–3.75%, effective 3.63%); DKK against Danmarks Nationalbank's rate increase
+// effective 2026-06-12. Where a bank publishes several rates, this is the one that
+// governs what cash earns — the ECB's deposit facility, not its main refinancing rate.
 const POLICY_RATES = {
-  USD: 4.50, EUR: 2.50, GBP: 4.50, JPY: 0.50, CAD: 2.75, AUD: 4.10, CHF: 0.25,
-  NZD: 3.50, SEK: 2.25, NOK: 4.25, DKK: 2.10, INR: 6.00, MXN: 9.00, BRL: 14.25,
-  ZAR: 7.25, KRW: 2.75, CNY: 3.10, PLN: 5.75, TRY: 42.50
+  USD: 3.63, EUR: 2.25, GBP: 3.75, JPY: 1.00, CAD: 2.25, AUD: 4.35, CHF: 0.00,
+  NZD: 2.50, SEK: 1.75, NOK: 4.25, DKK: 1.85, INR: 5.25, MXN: 6.50, BRL: 14.00,
+  ZAR: 7.00, KRW: 2.75, CNY: 3.00, PLN: 3.75, TRY: 37.00
 };
-const POLICY_AS_OF = "2026-04-20";
+const POLICY_AS_OF = "2026-08-15";
 const POLICY_FALLBACK = 3.0;
 
 // Rough annualised volatility of the pair against a major home currency.
