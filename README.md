@@ -8,8 +8,8 @@ earning interest but leaves you exposed to the currency. The two only become
 comparable once you put them on the same date — so everything here is expressed in
 *future money*, as of the day you'd otherwise pay.
 
-It asks three questions — where you're going, how much they want, and when you'd
-otherwise pay — and works out the rest. 245 destinations, 164 currencies.
+It asks four questions — where you're going, how much they want, when you'd
+otherwise pay, and what your cash earns — and works out the rest. 245 destinations, 164 currencies.
 
 ## The model
 
@@ -55,9 +55,13 @@ sanity check on magnitude, not a forecast.
 
 The APY default is deliberately *not* presented as a lookup. Policy rates aren't what
 your savings account pays, and the honest answer to "what does your money earn?" is
-one only you know — so it is a labelled starting point with an editable field. If your
-cash sits in a checking account earning nothing, enter 0 and watch the answer swing
-hard toward prepaying.
+one only you know — so it is a labelled starting point, and the field sits with the
+other three questions rather than buried in the assumptions.
+
+If your cash sits in a checking account earning nothing, enter 0. That erases the
+interest term entirely, and the decision comes down to points: identical rewards on
+both sides make it a dead tie, and the app says so rather than inventing a winner.
+Prepaying only pulls ahead if you'd have paid cash on arrival and earned nothing.
 
 **Rates are live on GitHub Pages only.** Published as a Claude Artifact, the page's
 content-security policy blocks the outbound fetch, so it runs on the snapshot and

@@ -143,7 +143,7 @@
   }
   .card > h2 { font-size: .9375rem; font-weight: 620; letter-spacing: -.01em; margin: 0; }
 
-  /* ---------- ask (the three questions) ---------- */
+  /* ---------- ask (the four questions) ---------- */
   .ask { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: .875rem 1rem; }
   .field { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
   .field > label {
@@ -375,7 +375,7 @@
     <p class="dek">
       Hotels and tours often let you prepay. Prepaying locks in today's exchange rate and earns
       your card points now — but your money stops earning interest, and you're betting the
-      currency won't move in your favour. Three questions below, and this works out which side
+      currency won't move in your favour. Four questions below, and this works out which side
       you're on and by how much.
     </p>
   </header>
@@ -421,6 +421,11 @@
         <label for="payDate">When would you otherwise pay?</label>
         <input id="payDate" type="date" value="2027-03-15">
         <span class="hint" id="daysHint"></span>
+      </div>
+      <div class="field">
+        <label for="apy">What does your cash earn? %</label>
+        <input id="apy" type="number" inputmode="decimal" min="0" step="0.05">
+        <span class="hint" id="apyHint"></span>
       </div>
     </div>
     <div class="ratebar">
@@ -524,11 +529,6 @@
           <label for="rate" id="rateLabel">Exchange rate</label>
           <input id="rate" type="number" inputmode="decimal" min="0" step="0.01">
           <span class="hint" id="rateHint"></span>
-        </div>
-        <div class="field">
-          <label for="apy">Your cash earns — APY %</label>
-          <input id="apy" type="number" inputmode="decimal" min="0" step="0.05">
-          <span class="hint" id="apyHint"></span>
         </div>
         <div class="field">
           <label for="tax">Tax on that interest %</label>
@@ -775,15 +775,23 @@
   function renderAnswer(m) {
     var i = m.inputs;
     var adv = m.atToday;
-    var prepayWins = adv > 0;
     var lc = i.local;
-
-    $("verdict").dataset.side = prepayWins ? "prepay" : "wait";
-    $("verdictHead").textContent = prepayWins ? "Prepay now" : "Wait and pay later";
-
     var mag = Math.abs(adv);
     var share = m.prepayCost > 0 ? mag / m.prepayCost : 0;
-    $("verdictSub").innerHTML = prepayWins
+
+    // Within a rounding error of the bill, calling a winner is false precision.
+    var tie = mag < Math.max(0.5, m.prepayCost * 0.0005);
+    var prepayWins = !tie && adv > 0;
+
+    $("verdict").dataset.side = tie ? "tie" : prepayWins ? "prepay" : "wait";
+    $("verdictHead").textContent = tie ? "Too close to call"
+      : prepayWins ? "Prepay now" : "Wait and pay later";
+
+    $("verdictSub").innerHTML = tie
+      ? "If the rate doesn't move, the two land within <strong>" + home(mag) + "</strong> of each other. "
+        + "At this margin the money isn't the deciding factor — pick on whether you'd want the booking "
+        + "to stay refundable."
+      : prepayWins
       ? "If the rate doesn't move, prepaying leaves you <strong>" + home(mag) + "</strong> better off — "
         + pct(share, 1) + " of the bill. The points you earn now beat the interest you give up."
       : "If the rate doesn't move, waiting leaves you <strong>" + home(mag) + "</strong> better off — "
@@ -793,6 +801,9 @@
     var far = Math.abs(c);
     $("verdictSwing").innerHTML = i.days === 0
       ? "You're paying today, so there's nothing to decide — the two are the same."
+      : tie
+      ? "Break-even is sitting right on today's rate of " + fmtRate(i.rate0) + ", so from here "
+        + lc + " moving either way decides it. There's no cushion in your favour in either direction."
       : (c >= 0
         ? "For prepaying to win instead, <strong>" + lc + " would have to strengthen more than "
           + pct(far, 1) + "</strong> against " + state.home + " before " + niceDate(els.payDate.value)
@@ -1128,8 +1139,8 @@
     if (!state.apyTouched) els.apy.value = defaultApy();
     if (!state.volTouched) els.vol.value = defaultVol();
     $("apyHint").textContent = state.apyTouched
-      ? "Your number"
-      : "Benchmark for " + state.home + " — change it to what your account pays";
+      ? "Your number — 0 if it just sits in checking"
+      : "Typical for " + state.home + " — put in what your account pays, or 0 if none";
     $("curLocal").textContent = localCur();
     $("curHome").textContent = state.home;
     els.amount.step = localCur() === "JPY" || localCur() === "KRW" || localCur() === "IDR" ? "1000" : "10";
