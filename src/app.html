@@ -581,7 +581,7 @@
       <div class="note"><span class="n">02</span><p><b>Chargeback leverage.</b> Paying on arrival keeps your card dispute rights close to the stay. Prepaying many months out can mean the dispute window closes before you travel.</p></div>
       <div class="note"><span class="n">03</span><p><b>Prepay discounts.</b> Many hotels shave 5–15% off for prepaid, non-refundable bookings. If yours does, that discount usually swamps everything here — put the discounted amount in and compare.</p></div>
       <div class="note"><span class="n">04</span><p><b>Point value.</b> The rewards fields assume points are worth about a cent each. Redeem for outsized value, or trigger a sign-up bonus, and prepaying is worth more than shown.</p></div>
-      <div class="note"><span class="n">05</span><p><b>The odds are a model, not a forecast.</b> They assume the rate wanders randomly from today's level with no drift. Nobody knows where it lands.</p></div>
+      <div class="note"><span class="n">05</span><p><b>The odds are a tally, not a forecast.</b> Where history allows, they count how often this pair actually moved far enough over every overlapping window since 1999 — no bell curve assumed, so real fat tails survive. Those windows overlap and the past is not the future; treat it as a frequency, not a probability.</p></div>
       <div class="note"><span class="n">06</span><p><b>The forward is a price, not a prediction.</b> It is fixed by arbitrage from the two countries' interest rates, which is why it always sits between today's rate and break-even — the gap is exactly the interest the other currency earns. It tells you what the market will guarantee you today, not what will happen. Real forwards also use money-market rates rather than the policy rates here, and some currencies carry a basis this misses.</p></div>
     </section>
   </div>
@@ -785,6 +785,49 @@
     };
   }
 
+  // Weekly log-levels against the base currency, decoded on first use.
+  var histCache = {};
+  function histSeries(code) {
+    var h = DATA.hist;
+    if (!h) return null;
+    if (histCache[code] !== undefined) return histCache[code];
+    if (code === DATA.base) {
+      histCache[code] = new Array(h.weeks).fill(0); // the base never moves against itself
+    } else if (h.series[code]) {
+      var o = h.series[code], acc = 0, a = new Array(o.s).fill(null);
+      o.d.split(",").forEach(function (x) { acc += +x; a.push(acc / h.scale); });
+      histCache[code] = a;
+    } else {
+      histCache[code] = null;
+    }
+    return histCache[code];
+  }
+
+  /**
+   * How often the pair actually moved far enough, counted over every overlapping
+   * window of the right length in the recorded history. This assumes no distribution
+   * at all — it is a tally, so it keeps whatever fat tails the currency really has.
+   * Windows overlap, so successive samples are not independent; it is an indication
+   * of frequency, not a confidence interval.
+   */
+  function empiricalOdds(rate0, breakeven, local, days) {
+    var h = DATA.hist;
+    if (!h) return null;
+    var sl = histSeries(local), sh = histSeries(state.home);
+    if (!sl || !sh) return null;
+    var w = Math.max(1, Math.round(days / 7));
+    if (w >= h.weeks - 50) return null;
+    var need = Math.log(breakeven / rate0); // prepaying wins when the log return is below this
+    var wins = 0, n = 0;
+    for (var t = 0; t + w < h.weeks; t++) {
+      var a = sl[t], b = sl[t + w], c = sh[t], d = sh[t + w];
+      if (a === null || b === null || c === null || d === null) continue;
+      if ((b - a) - (d - c) < need) wins++;
+      n++;
+    }
+    return n >= 100 ? { p: wins / n, n: n, weeks: w } : null;
+  }
+
   // Normal CDF (Abramowitz & Stegun 26.2.17)
   function Phi(z) {
     var t = 1 / (1 + 0.2316419 * Math.abs(z));
@@ -809,9 +852,16 @@
       breakeven: breakeven, cushion: cushion,
       forward: fwd,
       atForward: fwd ? costLater(fwd) - prepay : null,
-      oddsPrepay: Phi(Math.log(breakeven / i.rate0) / sigma)
+      // Centred on the forward, not on spot: the forward is the market's own
+      // expectation, and risk-neutral pricing drifts to it rather than staying put.
+      oddsModel: Phi(Math.log(breakeven / (fwd || i.rate0)) / sigma),
+      oddsCentre: fwd ? "forward" : "spot",
+      empirical: empiricalOdds(i.rate0, breakeven, i.local, i.days)
     };
   }
+
+  // Prefer the counted figure; fall back to the model where history is missing.
+  function oddsBest(m) { return m.empirical ? m.empirical.p : m.oddsModel; }
 
   /* ---------- render: answer ---------- */
   function renderAnswer(m) {
@@ -853,7 +903,8 @@
         : "Waiting only wins if <strong>" + lc + " weakens more than " + pct(far, 1) + "</strong> against "
           + state.home + " before " + niceDate(els.payDate.value)
           + " — from " + fmtRate(i.rate0) + " up to " + fmtRate(m.breakeven) + ". ")
-        + "Rough odds of that: " + Math.round((c >= 0 ? m.oddsPrepay : 1 - m.oddsPrepay) * 100) + "%.";
+        + "That has happened in " + Math.round((c >= 0 ? oddsBest(m) : 1 - oddsBest(m)) * 100)
+        + "% of comparable stretches.";
 
     $("beRate").textContent = fmtRate(m.breakeven);
     $("beNote").textContent = "Below this, prepaying wins; above it, waiting does. " + rateLine(i.rate0) + " today.";
@@ -885,10 +936,19 @@
     }
 
     var vi = volInfo();
-    $("odds").textContent = Math.round(m.oddsPrepay * 100) + "%";
-    $("oddsNote").textContent = "Random walk from today's rate at " + (i.vol * 100).toFixed(1)
-      + "% annual volatility over " + i.days + " days"
-      + (vi.measured ? ", measured from five years of daily rates." : ", a rough band for this pair.");
+    var e = m.empirical;
+    if (e) {
+      $("odds").textContent = Math.round(e.p * 100) + "%";
+      $("oddsNote").textContent = "Counted, not modelled: " + lc + " moved that far in "
+        + Math.round(e.p * 100) + "% of the " + e.n.toLocaleString() + " overlapping "
+        + e.weeks + "-week windows since " + DATA.hist.start.slice(0, 4)
+        + ". A random walk off the forward puts it at " + Math.round(m.oddsModel * 100) + "%.";
+    } else {
+      $("odds").textContent = Math.round(m.oddsModel * 100) + "%";
+      $("oddsNote").textContent = "No usable history for this pair, so this is a random walk from the "
+        + m.oddsCentre + " at " + (i.vol * 100).toFixed(1) + "% annual volatility"
+        + (vi.measured ? ", measured from five years of daily rates." : ", a rough band for this pair.");
+    }
 
     $("daysHint").textContent = i.days + " days away · " + (i.years * 12).toFixed(1) + " months";
     $("amountHint").textContent = state.amountIn === "local"

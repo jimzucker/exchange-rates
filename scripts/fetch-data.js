@@ -19,9 +19,12 @@ const RATES_URL = "https://open.er-api.com/v6/latest/USD";
 
 // Daily ECB reference rates, free and keyless, covering the ~30 most-traded currencies.
 // Used to measure volatility and correlation rather than guessing them.
-const HISTORY_YEARS = 5;
+const HISTORY_START = "1999-01-04";           // the ECB series begins here
+const VOL_YEARS = 5;                           // trailing window for volatility
 const HISTORY_URL = (from) => "https://api.frankfurter.dev/v1/" + from + "..?base=USD";
 const TRADING_DAYS = 252;
+const WEEK_MS = 7 * 86400000;
+const SCALE = 10000;                           // log-levels stored to 4 decimal places
 
 // Central bank policy rates, used as the starting guess for "what your cash earns".
 // A benchmark, not a savings-account APY — the app says so and the field is editable.
@@ -131,14 +134,74 @@ function measureVolatility(series) {
   return { vol, corr, from: dates[0], to: dates[dates.length - 1], days: dates.length };
 }
 
+/**
+ * Weekly log-level series per currency against USD, delta-encoded.
+ *
+ * This is what lets the app answer "how often has the rate actually moved this far?"
+ * from overlapping historical windows, instead of assuming a lognormal. Weekly
+ * resolution is ample for horizons measured in months, and keeps the payload small
+ * enough to ship: daily would be roughly seven times the size for no added accuracy
+ * at that horizon.
+ */
+function weeklySeries(series) {
+  const dates = Object.keys(series).sort();
+  const codes = Object.keys(series[dates[dates.length - 1]] || {});
+  const t0 = Date.parse(dates[0]), tN = Date.parse(dates[dates.length - 1]);
+
+  // Forward-fill onto a fixed weekly grid so every currency shares one time axis.
+  const grid = [];
+  for (let t = t0; t <= tN; t += WEEK_MS) grid.push(t);
+
+  let cursor = 0;
+  const latest = {};
+  const cols = {};
+  codes.forEach((c) => (cols[c] = []));
+  for (const gt of grid) {
+    while (cursor < dates.length && Date.parse(dates[cursor]) <= gt) {
+      const row = series[dates[cursor]];
+      codes.forEach((c) => { if (row[c] > 0) latest[c] = row[c]; });
+      cursor++;
+    }
+    codes.forEach((c) => cols[c].push(latest[c] || null));
+  }
+
+  const out = {};
+  codes.forEach((c) => {
+    const col = cols[c];
+    let s = col.findIndex((v) => v !== null);
+    if (s < 0) return;
+    const vals = col.slice(s);
+    if (vals.some((v) => v === null) || vals.length < 260) return; // need a clean decade
+    let prev = 0;
+    const deltas = vals.map((v) => {
+      const q = Math.round(Math.log(v) * SCALE);
+      const d = q - prev;
+      prev = q;
+      return d;
+    });
+    out[c] = { s: s, d: deltas.join(",") };
+  });
+
+  return { start: dates[0], weeks: grid.length, scale: SCALE, series: out };
+}
+
 (async function main() {
-  const start = new Date();
-  start.setFullYear(start.getFullYear() - HISTORY_YEARS);
-  const history = await get(HISTORY_URL(start.toISOString().slice(0, 10))).catch((e) => {
+  const history = await get(HISTORY_URL(HISTORY_START)).catch((e) => {
     console.error("history feed unavailable (" + e.message + ") — falling back to volatility bands");
     return null;
   });
-  const measured = history && history.rates ? measureVolatility(history.rates) : null;
+
+  let measured = null, hist = null;
+  if (history && history.rates) {
+    const all = history.rates;
+    const cut = new Date();
+    cut.setFullYear(cut.getFullYear() - VOL_YEARS);
+    const cutStr = cut.toISOString().slice(0, 10);
+    const recent = {};
+    Object.keys(all).forEach((d) => { if (d >= cutStr) recent[d] = all[d]; });
+    measured = measureVolatility(recent);
+    hist = weeklySeries(all);
+  }
 
   const [countries, fx] = await Promise.all([get(COUNTRIES_URL), get(RATES_URL)]);
   if (fx.result !== "success") throw new Error("FX feed returned result=" + fx.result);
@@ -204,7 +267,9 @@ function measureVolatility(series) {
       from: measured.from,
       to: measured.to,
       source: "frankfurter.dev (ECB reference rates)"
-    } : null
+    } : null,
+    // Weekly history, so the odds can be counted rather than modelled.
+    hist: hist
   };
 
   const dest = path.join(__dirname, "..", "src", "data.json");

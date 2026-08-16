@@ -40,9 +40,27 @@ interest term: the cushion is just `1 − 1/(1 + r)^t`. At 4.5% over seven month
 about 2.5%, which is why the answer to "how far does the rate have to move?" is
 usually a small single-digit percentage.
 
-The **rough odds** treat `ln R₁` as a driftless random walk from `ln R₀` with the
-annualized volatility shown, so `P(prepay wins) = Φ( ln(R*/R₀) / (σ√t) )`. It is a
-sanity check on magnitude, not a forecast.
+## The odds are counted, not modelled
+
+Where history covers both currencies, the app does not assume a distribution. It walks
+every overlapping window of the right length since 1999 and counts how often the pair
+actually moved far enough:
+
+```
+prepaying would have won when   ln(R_{t+w}/R_t) < ln(R*/R₀)
+```
+
+For Japan over 30-week windows that is 1,411 samples, and the answer is 37%. A lognormal
+model puts the same number at 47% — the gap is the yen's real behaviour over 27 years,
+which a bell curve centred on today does not capture.
+
+The windows overlap, so successive samples are not independent, and the past is not the
+future. It is a frequency, not a probability.
+
+Where a currency has no ECB history the app falls back to the parametric model,
+`P = Φ( ln(R*/F) / (σ√t) )` — **centred on the forward, not on spot**, since the forward
+is the market's own expectation and risk-neutral pricing drifts to it rather than staying
+put. Centring on spot understated prepaying's chances by about seven points.
 
 ## The forward rate, and why prepaying is a bet
 
@@ -81,6 +99,12 @@ still not a prediction.
 | Default APY | Central bank policy rate for your home currency | **No** — a static table, dated in the footer |
 | Forward rate | Derived from the policy table by covered interest parity | Follows the live spot |
 | Default volatility | Measured from 5 years of daily [ECB rates](https://frankfurter.dev) — stdev of log returns, annualised, with the full correlation matrix so cross-pairs are exact | Refreshed at build time |
+| Odds | Counted from weekly ECB history back to 1999 (29 currencies); parametric fallback otherwise | Refreshed at build time |
+
+The weekly history is delta-encoded log-levels at 4 decimal places — 151 kB of the
+payload, and the reason the page is 256 kB raw but **90 kB gzipped**, which is what
+GitHub Pages actually serves. Daily resolution would be seven times the size and add
+nothing at a horizon measured in months.
 
 The APY default is deliberately *not* presented as a lookup. Policy rates aren't what
 your savings account pays, and the honest answer to "what does your money earn?" is
