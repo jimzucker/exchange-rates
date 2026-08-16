@@ -229,6 +229,54 @@
     cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
   }
 
+  /* ---------- sticky answer ---------- */
+  /* The answer sits below the questions, so editing a number scrolls it out of view.
+     This mirrors it at the edge of the viewport whenever the real card isn't visible. */
+  .peek {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 20;
+    display: flex;
+    align-items: baseline;
+    gap: .5rem 1rem;
+    flex-wrap: wrap;
+    padding: .7rem clamp(1rem, 4vw, 2rem);
+    background: var(--surface);
+    border-top: 3px solid var(--rule);
+    box-shadow: 0 -6px 24px rgba(0,0,0,.13);
+    transform: translateY(110%);
+    transition: transform .18s ease;
+  }
+  .peek[data-on="1"] { transform: none; }
+  .peek[data-side="prepay"] { border-top-color: var(--pre); }
+  .peek[data-side="wait"]   { border-top-color: var(--wait); }
+  .peek-head {
+    font-size: 1rem; font-weight: 640; letter-spacing: -.01em; margin: 0;
+  }
+  .peek[data-side="prepay"] .peek-head { color: var(--pre); }
+  .peek[data-side="wait"]   .peek-head { color: var(--wait); }
+  .peek-sub {
+    margin: 0; font-size: .8125rem; color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .peek-sub b { color: var(--ink); font-weight: 620; }
+  .peek-link {
+    margin-left: auto;
+    font-family: var(--mono); font-size: .6875rem;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); background: none; border: 0; padding: .2rem;
+    cursor: pointer; white-space: nowrap;
+  }
+  .peek-link:hover { color: var(--ink); }
+  /* On a phone the bar is already at thumb height — tapping it is the affordance,
+     so the explicit link only earns its space on wider screens. */
+  @media (max-width: 34rem) {
+    .peek { cursor: pointer; padding-top: .6rem; padding-bottom: .6rem; }
+    .peek-link { display: none; }
+    .peek-head { font-size: .9375rem; }
+  }
+  @media print { .peek { display: none; } }
+
   /* ---------- verdict ---------- */
   .verdict { border-left: 3px solid var(--rule); }
   .verdict[data-side="prepay"] { border-left-color: var(--pre); background: linear-gradient(90deg, var(--pre-wash), transparent 45%), var(--surface); }
@@ -610,6 +658,12 @@
     </section>
   </div>
 
+  <div class="peek" id="peek" data-on="0" aria-hidden="true">
+    <p class="peek-head" id="peekHead">—</p>
+    <p class="peek-sub" id="peekSub"></p>
+    <button type="button" class="peek-link" id="peekJump">See the answer ↓</button>
+  </div>
+
   <footer>
     <p><code>R* = R₀ × (1+fee_late)(1−rew_late) ÷ [(1+fee_pre)(1−rew_pre) × (1+r)^t]</code> — where <code>R</code> is local currency per unit of home currency, <code>r</code> is your after-tax yield and <code>t</code> is years until the payment date. Both sides are compared in future money. Prepaying wins when the rate on the day is below <code>R*</code>.</p>
     <p id="dataNote"></p>
@@ -985,6 +1039,14 @@
           + " — from " + fmtRate(i.rate0) + " up to " + fmtRate(m.breakeven) + ". ")
         + "That has happened in " + Math.round((c >= 0 ? oddsBest(m) : 1 - oddsBest(m)) * 100)
         + "% of comparable stretches.";
+
+    // Mirror into the sticky bar, so the answer is legible while editing inputs.
+    $("peek").dataset.side = $("verdict").dataset.side;
+    $("peekHead").textContent = $("verdictHead").textContent;
+    $("peekSub").innerHTML = tie
+      ? "About <b>" + home(mag) + "</b> apart — the currency can undo that."
+      : (prepayWins ? "Prepaying" : "Waiting") + " ahead by <b>" + home(mag) + "</b> · "
+        + "break-even " + fmtRate(m.breakeven) + (m.forward ? " · forward " + fmtRate(m.forward) : "");
 
     $("beRate").textContent = fmtRate(m.breakeven);
     $("beNote").textContent = "Below this, prepaying wins; above it, waiting does. " + rateLine(i.rate0) + " today.";
@@ -1434,6 +1496,8 @@
     } else {
       chartState = { m: m, lo: 0, hi: 0, x: function () { return 0; }, y: function () { return 0; }, pts: [] };
     }
+    // The card's height changes with the verdict, so re-test what's on screen.
+    if ($("peek").checkNow) $("peek").checkNow();
     save();
   }
 
@@ -1546,6 +1610,42 @@
   // Open by default; a collapse is remembered. #details / #simple force either way.
   if (location.hash === "#details") state.detailsOpen = true;
   else if (location.hash === "#simple") state.detailsOpen = false;
+
+  // Show the mirrored answer only while the real card is off-screen.
+  (function () {
+    var peek = $("peek"), card = $("verdict");
+    function toggle(on) {
+      peek.dataset.on = on ? "1" : "0";
+      peek.setAttribute("aria-hidden", on ? "false" : "true");
+    }
+    // Plain geometry rather than IntersectionObserver: it costs nothing at this size,
+    // behaves the same everywhere, and can actually be tested in a headless browser.
+    var queued = false;
+    function check() {
+      queued = false;
+      var r = card.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      // How much of the card is actually on screen. A sliver of its top edge is not
+      // "visible" in any useful sense — you need enough to read the headline.
+      var seen = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+      toggle(seen < 140);
+    }
+    function onScroll() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(check);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    peek.checkNow = check;
+    check();
+    function jump() { card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    $("peekJump").addEventListener("click", jump);
+    // Where the link is hidden the bar itself is the target.
+    peek.addEventListener("click", function (ev) {
+      if (ev.target !== $("peekJump")) jump();
+    });
+  })();
 
   window.addEventListener("resize", function () {
     if (chartState && chartState.m && !$("details").hidden) renderChart(chartState.m);
