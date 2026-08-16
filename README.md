@@ -8,8 +8,9 @@ earning interest but leaves you exposed to the currency. The two only become
 comparable once you put them on the same date — so everything here is expressed in
 *future money*, as of the day you'd otherwise pay.
 
-It asks four questions — where you're going, how much they want, when you'd
-otherwise pay, and what your cash earns — and works out the rest. 245 destinations, 164 currencies.
+It asks where you're going, both prices, when you'd otherwise pay, what your cash earns,
+and how likely your plans are to change — then works out the rest. 245 destinations,
+164 currencies.
 
 ## The model
 
@@ -41,7 +42,8 @@ growth — it is the opportunity cost, not a charge.
 Setting the two equal gives the **break-even rate**:
 
 ```
-R* = R₀ × (1 + fee_late)(1 − rew_late) ÷ [ (1 + fee_pre)(1 − rew_pre) × (1 + r)^t ]
+R* = (LATE/PRE) × R₀ × (1 + fee_late)(1 − rew_late) × (1−p)
+     ÷ [ (1 + fee_pre)(1 − rew_pre) × (1 + r)^t × ((1−p) + p·c) ]
 ```
 
 Prepaying wins when `R₁ < R*`. The **cushion** — the headline number — is
