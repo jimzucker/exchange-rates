@@ -992,28 +992,31 @@
     var mag = Math.abs(adv);
     var share = m.prepayCost > 0 ? mag / m.prepayCost : 0;
 
-    // A winner is only worth naming when the gap survives the currency's own swing.
-    // The odds already fold in that swing, so a near-even split is the tie signal;
-    // a gap small against the 10th–90th percentile spread is the other.
+    // Three states, not two. Refusing to name a leader across a wide band made the
+    // inputs feel dead — change your savings rate and nothing appeared to happen. So
+    // the headline always names whoever is ahead; how confident it sounds is what
+    // varies. "Slightly ahead" is a lean, "the better bet" clears the currency's swing.
     var p = oddsBest(m);
     var spread = m.band ? Math.abs(m.band.worst.diff - m.band.best.diff) : null;
-    var tie = (p > 0.40 && p < 0.60) ||
-              (spread ? mag < spread * 0.12 : mag < Math.max(0.5, m.prepayCost * 0.0005));
+    var trivial = mag < m.prepayCost * 0.005;
+    var tie = trivial || (p > 0.45 && p < 0.55);
+    var robust = spread ? mag > spread * 0.25 : mag > m.prepayCost * 0.02;
     var prepayWins = !tie && adv > 0;
+    var side = prepayWins ? "Prepaying" : "Waiting";
 
     $("verdict").dataset.side = tie ? "tie" : prepayWins ? "prepay" : "wait";
     $("verdictHead").textContent = tie ? "Financially near break-even"
-      : prepayWins ? "Prepaying is the better bet" : "Waiting is the better bet";
+      : side + (robust ? " is the better bet" : " is slightly ahead");
 
     $("verdictSub").innerHTML = tie
       ? "On price these are a coin flip — about <strong>" + home(mag) + "</strong> apart on expected cost, "
         + "which the currency can undo in a week. Decide on flexibility instead: waiting keeps the booking "
         + "cancellable and your dispute rights close to the stay."
-      : prepayWins
-      ? "Expected cost favours prepaying by <strong>" + home(mag) + "</strong>, "
-        + pct(share, 1) + " of the bill — and that survives the currency's normal swing."
-      : "Expected cost favours waiting by <strong>" + home(mag) + "</strong>, "
-        + pct(share, 1) + " of the bill — and that survives the currency's normal swing.";
+      : "Expected cost favours " + side.toLowerCase() + " by <strong>" + home(mag) + "</strong>, "
+        + pct(share, 1) + " of the bill — "
+        + (robust
+            ? "enough to survive the currency's normal swing."
+            : "but the currency routinely moves more than that, so treat it as a lean rather than a verdict.");
 
     var c = m.cushion;
     var far = Math.abs(c);
@@ -1037,8 +1040,8 @@
     $("peekHead").textContent = $("verdictHead").textContent;
     $("peekSub").innerHTML = tie
       ? "About <b>" + home(mag) + "</b> apart — the currency can undo that."
-      : (prepayWins ? "Prepaying" : "Waiting") + " ahead by <b>" + home(mag) + "</b> · "
-        + "break-even " + fmtRate(m.breakeven) + (m.forward ? " · forward " + fmtRate(m.forward) : "");
+      : side + " ahead by <b>" + home(mag) + "</b> · break-even " + fmtRate(m.breakeven)
+        + (m.forward ? " · forward " + fmtRate(m.forward) : "");
 
     $("beRate").textContent = fmtRate(m.breakeven);
     $("beNote").textContent = "Below this, prepaying wins; above it, waiting does. " + rateLine(i.rate0) + " today.";
