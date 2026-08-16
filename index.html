@@ -390,7 +390,7 @@
     <p class="dek">
       Hotels and tours often let you prepay. Prepaying locks in today's exchange rate and earns
       your card points now — but your money stops earning interest, and you're betting the
-      currency won't move in your favour. Four questions below, and this works out which side
+      currency won't move in your favour. Answer the questions below and this works out which side
       you're on and by how much.
     </p>
   </header>
@@ -422,10 +422,10 @@
         <span class="hint" id="destHint"></span>
       </div>
       <div class="field">
-        <label for="amount">How much are they asking?</label>
+        <label for="amount">Price if you pay later</label>
         <div class="amount-row">
           <input id="amount" type="text" inputmode="decimal" autocomplete="off" value="450000">
-          <div class="seg" role="group" aria-label="Currency of the amount">
+          <div class="seg" role="group" aria-label="Currency of the amounts">
             <button type="button" id="curLocal" aria-pressed="true">JPY</button>
             <button type="button" id="curHome" aria-pressed="false">USD</button>
           </div>
@@ -433,9 +433,19 @@
         <span class="hint" id="amountHint"></span>
       </div>
       <div class="field">
+        <label for="amountPre">Price if you prepay</label>
+        <input id="amountPre" type="text" inputmode="decimal" autocomplete="off" value="450000">
+        <span class="hint" id="amountPreHint"></span>
+      </div>
+      <div class="field">
         <label for="payDate">When would you otherwise pay?</label>
         <input id="payDate" type="date" value="2027-03-15">
         <span class="hint" id="daysHint"></span>
+      </div>
+      <div class="field">
+        <label for="cancelP">Chance your plans change</label>
+        <div class="with-suffix"><input id="cancelP" type="number" inputmode="decimal" min="0" max="100" step="1" value="0"><span class="suffix">%</span></div>
+        <span class="hint" id="cancelHint"></span>
       </div>
       <div class="field">
         <label for="apy">What does your cash earn?</label>
@@ -455,6 +465,7 @@
     <p class="verdict-head" id="verdictHead">—</p>
     <p class="verdict-sub" id="verdictSub"></p>
     <p class="verdict-swing" id="verdictSwing"></p>
+    <p class="verdict-swing" id="verdictRange"></p>
     <p class="verdict-swing" id="verdictForward"></p>
   </section>
 
@@ -553,6 +564,11 @@
           <span class="hint" id="rateHint"></span>
         </div>
         <div class="field">
+          <label for="cancelLoss">If you cancel, you lose</label>
+          <div class="with-suffix"><input id="cancelLoss" type="number" inputmode="decimal" min="0" max="100" step="5" value="100"><span class="suffix">%</span></div>
+          <span class="hint">Of the prepaid amount. 100% = non-refundable</span>
+        </div>
+        <div class="field">
           <label for="tax">Tax on that interest</label>
           <div class="with-suffix"><input id="tax" type="number" inputmode="decimal" min="0" max="60" step="1" value="0"><span class="suffix">%</span></div>
           <span class="hint">Interest is taxable; points usually aren't</span>
@@ -585,9 +601,9 @@
 
     <section class="card notes">
       <h2>What the math can't price</h2>
-      <div class="note"><span class="n">01</span><p><b>Refundability.</b> A prepaid rate is usually non-refundable or penalty-heavy. If the trip could change, that flexibility is worth real money nothing above can see.</p></div>
+      <div class="note"><span class="n">01</span><p><b>Refundability is priced, roughly.</b> Setting a chance your plans change turns a non-refundable prepayment into an expected loss, which is the honest way to compare it. What it still cannot price is how much you would <i>value</i> being able to change your mind — for many trips that is worth more than the arithmetic either way.</p></div>
       <div class="note"><span class="n">02</span><p><b>Chargeback leverage.</b> Paying on arrival keeps your card dispute rights close to the stay. Prepaying many months out can mean the dispute window closes before you travel.</p></div>
-      <div class="note"><span class="n">03</span><p><b>Prepay discounts.</b> Many hotels shave 5–15% off for prepaid, non-refundable bookings. If yours does, that discount usually swamps everything here — put the discounted amount in and compare.</p></div>
+      <div class="note"><span class="n">03</span><p><b>Prepay discounts usually decide it.</b> Hotels often shave 5–15% off for prepaid, non-refundable bookings. Put both prices in above and watch it swamp everything else here — a 10% discount is worth several times the interest on your money.</p></div>
       <div class="note"><span class="n">04</span><p><b>Point value.</b> The rewards fields assume points are worth about a cent each. Redeem for outsized value, or trigger a sign-up bonus, and prepaying is worth more than shown.</p></div>
       <div class="note"><span class="n">05</span><p><b>The odds are a tally, not a forecast.</b> Where history allows, they count how often this pair actually moved far enough over every overlapping window since 1999 — no bell curve assumed, so real fat tails survive. Those windows overlap and the past is not the future; treat it as a frequency, not a probability.</p></div>
       <div class="note"><span class="n">06</span><p><b>The forward is a price, not a prediction.</b> It is fixed by arbitrage from the two countries' interest rates, which is why it always sits between today's rate and break-even — the gap is exactly the interest the other currency earns. It tells you what the market will guarantee you today, not what will happen. Real forwards also use money-market rates rather than the policy rates here, and some currencies carry a basis this misses.</p></div>
@@ -620,7 +636,8 @@
   var els = {
     dest: $("dest"), home: $("home"), amount: $("amount"), payDate: $("payDate"),
     rate: $("rate"), apy: $("apy"), tax: $("tax"), rewPre: $("rewPre"),
-    rewLate: $("rewLate"), fxPre: $("fxPre"), fxLate: $("fxLate"), vol: $("vol")
+    rewLate: $("rewLate"), fxPre: $("fxPre"), fxLate: $("fxLate"), vol: $("vol"),
+    amountPre: $("amountPre"), cancelP: $("cancelP"), cancelLoss: $("cancelLoss")
   };
 
   /* ---------- lookups ---------- */
@@ -732,6 +749,7 @@
     return Number(v).toLocaleString(undefined, { maximumFractionDigits: 2, useGrouping: true });
   }
   function setAmount(v) { els.amount.value = grouped(v); }
+  function setAmountPre(v) { els.amountPre.value = grouped(v); }
 
   function defaultApy() {
     var p = DATA.policy[state.home];
@@ -768,8 +786,9 @@
   function readInputs() {
     var lc = localCur();
     var R0 = Math.max(1e-9, num(els.rate, pairRate(state.home, lc) || 1));
-    var raw = Math.max(0, num(els.amount, 0));
-    var amountLocal = state.amountIn === "local" ? raw : raw * R0;
+    var toLocal = function (v) { return state.amountIn === "local" ? v : v * R0; };
+    var amountLocal = toLocal(Math.max(0, num(els.amount, 0)));
+    var amountPre = toLocal(Math.max(0, num(els.amountPre, 0)));
 
     var today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -780,6 +799,9 @@
     return {
       local: lc,
       amountLocal: amountLocal,
+      amountPre: amountPre,
+      cancelP: Math.min(1, Math.max(0, num(els.cancelP, 0)) / 100),
+      cancelLoss: Math.min(1, Math.max(0, num(els.cancelLoss, 100)) / 100),
       rate0: R0,
       days: days,
       years: days / 365,
@@ -836,6 +858,35 @@
     return n >= 100 ? { p: wins / n, n: n, weeks: w } : null;
   }
 
+  /**
+   * The spread of outcomes, taken from the same historical windows as the odds.
+   * A single "waiting wins by $X" hides that the currency can swing many times that;
+   * the 10th–90th percentile of what waiting actually costs is the honest picture.
+   */
+  function outcomeBand(i, costLater, prepay) {
+    var h = DATA.hist;
+    if (!h) return null;
+    var sl = histSeries(i.local), sh = histSeries(state.home);
+    if (!sl || !sh) return null;
+    var w = Math.max(1, Math.round(i.days / 7));
+    if (w >= h.weeks - 50) return null;
+    var rets = [];
+    for (var t = 0; t + w < h.weeks; t++) {
+      var a = sl[t], b = sl[t + w], c = sh[t], d = sh[t + w];
+      if (a === null || b === null || c === null || d === null) continue;
+      rets.push((b - a) - (d - c));
+    }
+    if (rets.length < 100) return null;
+    rets.sort(function (x, y) { return x - y; });
+    var at = function (q) {
+      var R = i.rate0 * Math.exp(rets[Math.min(rets.length - 1, Math.floor(q * rets.length))]);
+      return { rate: R, wait: costLater(R), diff: costLater(R) - prepay };
+    };
+    // A stronger local currency (low return) makes waiting dearest, so p10 of the
+    // return is the expensive tail for the waiter.
+    return { worst: at(0.10), mid: at(0.50), best: at(0.90), n: rets.length };
+  }
+
   // Normal CDF (Abramowitz & Stegun 26.2.17)
   function Phi(z) {
     var t = 1 / (1 + 0.2316419 * Math.abs(z));
@@ -846,10 +897,22 @@
 
   function compute(i) {
     var growth = Math.pow(1 + i.apy * (1 - i.tax), i.years);
-    var prepay = (i.amountLocal / i.rate0) * (1 + i.fxPre) * (1 - i.rewPre) * growth;
+    // Prepaying locks its own price at today's rate; waiting is exposed to R.
+    var prepayIfTaken = (i.amountPre / i.rate0) * (1 + i.fxPre) * (1 - i.rewPre) * growth;
     var laterFactor = (1 + i.fxLate) * (1 - i.rewLate);
-    var costLater = function (R) { return (i.amountLocal / R) * laterFactor; };
-    var breakeven = prepay > 0 ? (i.amountLocal * laterFactor) / prepay : i.rate0;
+    var costLaterIfTaken = function (R) { return (i.amountLocal / R) * laterFactor; };
+
+    // If the trip falls through you still eat the non-refundable share of a prepayment,
+    // while waiting costs nothing. Expected cost, not best case.
+    var keep = 1 - i.cancelP;
+    var prepay = prepayIfTaken * (keep + i.cancelP * i.cancelLoss);
+    var costLater = function (R) { return costLaterIfTaken(R) * keep; };
+    var cancelPenalty = prepayIfTaken * i.cancelP * i.cancelLoss;
+
+    // Solve costLater(R) = prepay for R.
+    var breakeven = prepay > 0 && keep > 0
+      ? (i.amountLocal * laterFactor * keep) / prepay
+      : i.rate0;
     var cushion = (i.rate0 - breakeven) / i.rate0;
     var sigma = i.vol * Math.sqrt(Math.max(i.years, 1e-6));
     var fwd = forwardRate(i.rate0, i.local, i.years);
@@ -864,7 +927,11 @@
       // expectation, and risk-neutral pricing drifts to it rather than staying put.
       oddsModel: Phi(Math.log(breakeven / (fwd || i.rate0)) / sigma),
       oddsCentre: fwd ? "forward" : "spot",
-      empirical: empiricalOdds(i.rate0, breakeven, i.local, i.days)
+      empirical: empiricalOdds(i.rate0, breakeven, i.local, i.days),
+      prepayIfTaken: prepayIfTaken,
+      cancelPenalty: cancelPenalty,
+      discount: i.amountLocal > 0 ? (i.amountLocal - i.amountPre) / i.amountLocal : 0,
+      band: outcomeBand(i, costLater, prepay)
     };
   }
 
@@ -879,29 +946,34 @@
     var mag = Math.abs(adv);
     var share = m.prepayCost > 0 ? mag / m.prepayCost : 0;
 
-    // Within a rounding error of the bill, calling a winner is false precision.
-    var tie = mag < Math.max(0.5, m.prepayCost * 0.0005);
+    // A winner is only worth naming when the gap survives the currency's own swing.
+    // The odds already fold in that swing, so a near-even split is the tie signal;
+    // a gap small against the 10th–90th percentile spread is the other.
+    var p = oddsBest(m);
+    var spread = m.band ? Math.abs(m.band.worst.diff - m.band.best.diff) : null;
+    var tie = (p > 0.40 && p < 0.60) ||
+              (spread ? mag < spread * 0.12 : mag < Math.max(0.5, m.prepayCost * 0.0005));
     var prepayWins = !tie && adv > 0;
 
     $("verdict").dataset.side = tie ? "tie" : prepayWins ? "prepay" : "wait";
-    $("verdictHead").textContent = tie ? "Too close to call"
-      : prepayWins ? "Prepay now" : "Wait and pay later";
+    $("verdictHead").textContent = tie ? "Financially near break-even"
+      : prepayWins ? "Prepaying is the better bet" : "Waiting is the better bet";
 
     $("verdictSub").innerHTML = tie
-      ? "If the rate doesn't move, the two land within <strong>" + home(mag) + "</strong> of each other. "
-        + "At this margin the money isn't the deciding factor — pick on whether you'd want the booking "
-        + "to stay refundable."
+      ? "On price these are a coin flip — about <strong>" + home(mag) + "</strong> apart on expected cost, "
+        + "which the currency can undo in a week. Decide on flexibility instead: waiting keeps the booking "
+        + "cancellable and your dispute rights close to the stay."
       : prepayWins
-      ? "If the rate doesn't move, prepaying leaves you <strong>" + home(mag) + "</strong> better off — "
-        + pct(share, 1) + " of the bill. The points you earn now beat the interest you give up."
-      : "If the rate doesn't move, waiting leaves you <strong>" + home(mag) + "</strong> better off — "
-        + pct(share, 1) + " of the bill. The interest your money keeps earning beats what prepaying locks in.";
+      ? "Expected cost favours prepaying by <strong>" + home(mag) + "</strong>, "
+        + pct(share, 1) + " of the bill — and that survives the currency's normal swing."
+      : "Expected cost favours waiting by <strong>" + home(mag) + "</strong>, "
+        + pct(share, 1) + " of the bill — and that survives the currency's normal swing.";
 
     var c = m.cushion;
     var far = Math.abs(c);
     $("verdictSwing").innerHTML = i.days === 0
       ? "You're paying today, so there's nothing to decide — the two are the same."
-      : tie
+      : Math.abs(c) < 0.0005
       ? "Break-even is sitting right on today's rate of " + fmtRate(i.rate0) + ", so from here "
         + lc + " moving either way decides it. There's no cushion in your favour in either direction."
       : (c >= 0
@@ -943,6 +1015,25 @@
       $("verdictForward").textContent = "";
     }
 
+    // The range matters more than the point estimate, so it goes in the answer itself.
+    var parts = [];
+    if (m.discount > 0.001) {
+      parts.push("The prepaid price is <strong>" + pct(m.discount, 1) + " cheaper</strong> ("
+        + home((i.amountLocal - i.amountPre) / i.rate0) + " less at today's rate)");
+    }
+    if (m.cancelPenalty > 0.5) {
+      parts.push("a " + pct(i.cancelP, 0) + " chance of cancelling costs prepaying <strong>"
+        + home(m.cancelPenalty) + "</strong> in expectation");
+    }
+    if (m.band) {
+      parts.push("across the last " + m.band.n.toLocaleString() + " comparable stretches, waiting landed anywhere from <strong>"
+        + home(m.band.best.wait) + "</strong> to <strong>" + home(m.band.worst.wait)
+        + "</strong> against a fixed " + home(m.prepayCost) + " to prepay");
+    }
+    $("verdictRange").innerHTML = parts.length
+      ? parts.join(" · ").replace(/^./, function (c) { return c.toUpperCase(); }) + "."
+      : "";
+
     var vi = volInfo();
     var e = m.empirical;
     if (e) {
@@ -962,6 +1053,14 @@
     $("amountHint").textContent = state.amountIn === "local"
       ? "≈ " + home(i.amountLocal / i.rate0) + " at today's rate"
       : "≈ " + fmtCur(i.amountLocal, lc, 0) + " at today's rate";
+    $("amountPreHint").textContent = m.discount > 0.001
+      ? pct(m.discount, 1) + " cheaper than paying later"
+      : m.discount < -0.001
+      ? pct(-m.discount, 1) + " dearer than paying later"
+      : "Same price — hotels often discount this";
+    $("cancelHint").textContent = i.cancelP > 0
+      ? "Costs prepaying " + home(m.cancelPenalty) + " in expectation"
+      : "Prepaid rates are usually non-refundable";
     $("destHint").textContent = "They'll charge you in " + curName(lc) + " (" + lc + ")";
     $("rulerLeft").textContent = "← stronger " + lc + " · costs more";
     $("rulerRight").textContent = "weaker " + lc + " · costs less →";
@@ -1315,8 +1414,9 @@
   function setAmountIn(which) {
     if (state.amountIn === which) return;
     var R = Math.max(1e-9, num(els.rate, 1));
-    var v = Math.max(0, num(els.amount, 0));
-    setAmount(which === "local" ? Math.round(v * R) : Math.round(v / R));
+    var conv = function (v) { return which === "local" ? Math.round(v * R) : Math.round(v / R); };
+    setAmount(conv(Math.max(0, num(els.amount, 0))));
+    setAmountPre(conv(Math.max(0, num(els.amountPre, 0))));
     state.amountIn = which;
     $("curLocal").setAttribute("aria-pressed", String(which === "local"));
     $("curHome").setAttribute("aria-pressed", String(which === "home"));
@@ -1366,13 +1466,16 @@
     els.dest.value = state.dest;
     els.home.value = state.home;
     els.tax.value = 0; els.rewPre.value = 2; els.rewLate.value = 2;
+    els.cancelP.value = 0; els.cancelLoss.value = 100;
     els.fxPre.value = 0; els.fxLate.value = 0;
     var d = new Date(); d.setMonth(d.getMonth() + 7);
     els.payDate.value = d.toISOString().slice(0, 10);
     syncRate();
     syncDefaults();
     var R = pairRate(state.home, localCur()) || 1;
-    setAmount(Math.round(2800 * R / 100) * 100); // a ~2,800-unit trip, rounded
+    var a = Math.round(2800 * R / 100) * 100; // a ~2,800-unit trip, rounded
+    setAmount(a);
+    setAmountPre(a);                          // same price until told otherwise
     $("curLocal").setAttribute("aria-pressed", "true");
     $("curHome").setAttribute("aria-pressed", "false");
   }
@@ -1408,17 +1511,19 @@
   els.rate.addEventListener("input", function () { state.rateTouched = true; update(); });
   els.apy.addEventListener("input", function () { state.apyTouched = true; update(); });
   els.vol.addEventListener("input", function () { state.volTouched = true; update(); });
-  ["amount", "payDate", "tax", "rewPre", "rewLate", "fxPre", "fxLate"].forEach(function (k) {
+  ["amount", "amountPre", "payDate", "tax", "rewPre", "rewLate", "fxPre", "fxLate", "cancelP", "cancelLoss"].forEach(function (k) {
     els[k].addEventListener("input", update);
     els[k].addEventListener("change", update);
   });
 
   // Separators would fight the caret mid-edit, so strip them on focus and restore on blur.
-  els.amount.addEventListener("focus", function () {
-    this.value = String(this.value).replace(/,/g, "");
-  });
-  els.amount.addEventListener("blur", function () {
-    setAmount(Math.max(0, num(els.amount, 0)));
+  [els.amount, els.amountPre].forEach(function (el) {
+    el.addEventListener("focus", function () {
+      this.value = String(this.value).replace(/,/g, "");
+    });
+    el.addEventListener("blur", function () {
+      this.value = grouped(Math.max(0, num(this, 0)));
+    });
   });
 
   $("curLocal").addEventListener("click", function () { setAmountIn("local"); });
@@ -1447,6 +1552,7 @@
   });
 
   setAmount(Math.max(0, num(els.amount, 0))); // a restored or default value arrives unformatted
+  setAmountPre(Math.max(0, num(els.amountPre, 0)));
   setDetails(state.detailsOpen); // also does the first update()
   refreshRates();
 })();

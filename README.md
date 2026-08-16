@@ -17,6 +17,19 @@ Let `R` be **units of local currency per unit of your home currency** (so a *low
 `R` means a *stronger* local currency and a more expensive trip), `t` the years until
 the payment date, and `r` your after-tax yield.
 
+The two prices are entered separately — prepaid rates are usually discounted, and that
+discount is normally the largest term in the whole comparison. With `p` the chance the
+trip doesn't happen and `c` the share of a prepayment you'd forfeit:
+
+```
+cost_prepay = (PRE  / R₀) × (1 + fee_pre)  × (1 − rew_pre) × (1 + r)^t × [(1−p) + p·c]
+cost_wait   = (LATE / R₁) × (1 + fee_late) × (1 − rew_late)            × (1−p)
+```
+
+The `p·c` term is what cancellation risk costs prepaying: if the trip falls through you
+still eat the non-refundable share, while waiting costs nothing. With `p = 0` both
+collapse to the simple case:
+
 ```
 cost_prepay = (LOCAL / R₀) × (1 + fee_pre)  × (1 − rew_pre)  × (1 + r)^t
 cost_wait   = (LOCAL / R₁) × (1 + fee_late) × (1 − rew_late)
@@ -120,11 +133,26 @@ Prepaying only pulls ahead if you'd have paid cash on arrival and earned nothing
 content-security policy blocks the outbound fetch, so it runs on the snapshot and
 says so in the status line.
 
+## Why the headline is a range, not a winner
+
+A single "waiting wins by $57" implies confidence the numbers don't support. $57 is
+trivial beside what the currency can do in a month, beside cancellation flexibility, or
+beside a small prepaid discount.
+
+So the app names a winner only when the gap survives the currency's own swing — when the
+odds fall outside 40–60%, and the gap clears roughly an eighth of the 10th–90th
+percentile spread of outcomes. Otherwise the headline reads **"Financially near
+break-even"** and points at flexibility, because that is what actually decides it there.
+
+The answer always shows the spread alongside the point estimate: for the default Japan
+case, waiting has historically landed anywhere between $2,489 and $3,001 against a fixed
+$2,801 to prepay. Against a $512 range, a $57 edge is noise.
+
 ## What it deliberately doesn't model
 
-Refundability, chargeback timing, prepay discounts, outsized point redemptions, and
-sign-up bonuses. These are listed in the app because they routinely matter more than
-the arithmetic does — a 10% prepaid-rate discount swamps a 2% interest cushion.
+Chargeback timing, outsized point redemptions, and sign-up bonuses. Also the value of
+simply being able to change your mind, which is separate from the expected cost of
+cancelling and for many trips is worth more than either. These are listed in the app.
 
 ## Build
 
