@@ -44,6 +44,34 @@ The **rough odds** treat `ln R₁` as a driftless random walk from `ln R₀` wit
 annualized volatility shown, so `P(prepay wins) = Φ( ln(R*/R₀) / (σ√t) )`. It is a
 sanity check on magnitude, not a forecast.
 
+## The forward rate, and why prepaying is a bet
+
+An FX forward — or a currency future — is not a prediction. Its price is locked by
+arbitrage to the two countries' interest rates:
+
+```
+F = R₀ × (1 + r_local)^t / (1 + r_home)^t
+```
+
+Divide that by the break-even and everything cancels but one term:
+
+```
+F / R* = (1 + r_local)^t
+```
+
+Since foreign rates are never negative in practice, **the forward always sits above
+break-even**. At the price the market will actually guarantee you today, waiting wins —
+by exactly the interest the foreign currency earns.
+
+That reframes the whole question. Prepaying is not a hedge; it is a directional bet that
+the local currency strengthens by *more* than the market has already priced in. The app
+shows the forward alongside "if the rate doesn't move", because the second is a much
+weaker benchmark: for the Japan case it overstates waiting's advantage roughly threefold.
+
+Caveats it states in the UI: real forwards use money-market rates rather than the policy
+rates here, some currencies carry a cross-currency basis this misses, and a price is
+still not a prediction.
+
 ## Where the numbers come from
 
 | Number | Source | Live? |
@@ -51,7 +79,8 @@ sanity check on magnitude, not a forecast.
 | Exchange rates | [open.er-api.com](https://open.er-api.com) — 164 currencies, no key | **Yes**, re-fetched in the browser on load; falls back to the build-time snapshot |
 | Countries, currencies, symbols | [mledoze/countries](https://github.com/mledoze/countries) | Baked in at build time |
 | Default APY | Central bank policy rate for your home currency | **No** — a static table, dated in the footer |
-| Default volatility | Coarse band per currency (majors ≈ 9%, pegs ≈ 2%, rest ≈ 13%) | **No** — only feeds the odds figure |
+| Forward rate | Derived from the policy table by covered interest parity | Follows the live spot |
+| Default volatility | Measured from 5 years of daily [ECB rates](https://frankfurter.dev) — stdev of log returns, annualised, with the full correlation matrix so cross-pairs are exact | Refreshed at build time |
 
 The APY default is deliberately *not* presented as a lookup. Policy rates aren't what
 your savings account pays, and the honest answer to "what does your money earn?" is

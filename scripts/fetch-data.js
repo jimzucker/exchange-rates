@@ -17,6 +17,12 @@ const path = require("path");
 const COUNTRIES_URL = "https://raw.githubusercontent.com/mledoze/countries/master/countries.json";
 const RATES_URL = "https://open.er-api.com/v6/latest/USD";
 
+// Daily ECB reference rates, free and keyless, covering the ~30 most-traded currencies.
+// Used to measure volatility and correlation rather than guessing them.
+const HISTORY_YEARS = 5;
+const HISTORY_URL = (from) => "https://api.frankfurter.dev/v1/" + from + "..?base=USD";
+const TRADING_DAYS = 252;
+
 // Central bank policy rates, used as the starting guess for "what your cash earns".
 // A benchmark, not a savings-account APY — the app says so and the field is editable.
 //
@@ -47,11 +53,24 @@ const VOL_DEFAULT = 13;
 const MAJORS = ["USD", "EUR", "JPY", "GBP", "CHF", "CAD", "AUD", "NZD", "SEK", "NOK", "DKK"];
 const PEGGED = ["HKD", "AED", "SAR", "QAR", "BHD", "OMR", "JOD", "PAB", "BSD", "BMD", "KYD", "AWG", "ANG", "XCD", "BZD", "CUC", "DJF", "ERN", "LBP"];
 
-function get(url) {
-  return fetch(url, { headers: { "user-agent": "prepay-or-wait build script" } }).then(function (r) {
-    if (!r.ok) throw new Error(url + " -> HTTP " + r.status);
-    return r.json();
-  });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// These feeds throw transient 5xx often enough that a single attempt would let the
+// unattended weekly build quietly fall back to worse data.
+async function get(url, attempts = 4) {
+  let last;
+  for (let i = 0; i < attempts; i++) {
+    if (i) await sleep(1500 * i);
+    try {
+      const r = await fetch(url, { headers: { "user-agent": "prepay-or-wait build script" } });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    } catch (e) {
+      last = e;
+      console.error("  attempt " + (i + 1) + "/" + attempts + " failed for " + url + " — " + e.message);
+    }
+  }
+  throw new Error(url + " -> " + last.message);
 }
 
 function volFor(code) {
@@ -60,7 +79,67 @@ function volFor(code) {
   return VOL_DEFAULT;
 }
 
+/**
+ * Annualised volatility of each currency against USD, plus the correlation matrix.
+ * The app needs the volatility of a *pair* (say JPY per EUR); with both legs quoted
+ * against USD that is sqrt(sL² + sH² − 2·rho·sL·sH), so correlations are required —
+ * treating the legs as independent would materially overstate cross-rate risk.
+ */
+function measureVolatility(series) {
+  const dates = Object.keys(series).sort();
+  const codes = Object.keys(series[dates[dates.length - 1]] || {});
+
+  // Daily log returns, only where consecutive observations both exist.
+  const rets = {};
+  codes.forEach((c) => (rets[c] = []));
+  for (let i = 1; i < dates.length; i++) {
+    const a = series[dates[i - 1]], b = series[dates[i]];
+    codes.forEach((c) => {
+      if (a && b && a[c] > 0 && b[c] > 0) rets[c].push(Math.log(b[c] / a[c]));
+      else rets[c].push(null);
+    });
+  }
+
+  const usable = codes.filter((c) => rets[c].filter((v) => v !== null).length > 250);
+  const mean = {}, sd = {};
+  usable.forEach((c) => {
+    const v = rets[c].filter((x) => x !== null);
+    const m = v.reduce((s, x) => s + x, 0) / v.length;
+    mean[c] = m;
+    sd[c] = Math.sqrt(v.reduce((s, x) => s + (x - m) * (x - m), 0) / (v.length - 1));
+  });
+
+  const vol = { USD: 0 };
+  usable.forEach((c) => (vol[c] = +(sd[c] * Math.sqrt(TRADING_DAYS) * 100).toFixed(2)));
+
+  const corr = { USD: { USD: 1 } };
+  usable.forEach((a) => {
+    corr[a] = { USD: 0 };
+    corr.USD[a] = 0;
+    usable.forEach((b) => {
+      let n = 0, cov = 0;
+      for (let i = 0; i < rets[a].length; i++) {
+        const x = rets[a][i], y = rets[b][i];
+        if (x === null || y === null) continue;
+        cov += (x - mean[a]) * (y - mean[b]);
+        n++;
+      }
+      corr[a][b] = n > 1 ? +(cov / (n - 1) / (sd[a] * sd[b])).toFixed(3) : 0;
+    });
+  });
+
+  return { vol, corr, from: dates[0], to: dates[dates.length - 1], days: dates.length };
+}
+
 (async function main() {
+  const start = new Date();
+  start.setFullYear(start.getFullYear() - HISTORY_YEARS);
+  const history = await get(HISTORY_URL(start.toISOString().slice(0, 10))).catch((e) => {
+    console.error("history feed unavailable (" + e.message + ") — falling back to volatility bands");
+    return null;
+  });
+  const measured = history && history.rates ? measureVolatility(history.rates) : null;
+
   const [countries, fx] = await Promise.all([get(COUNTRIES_URL), get(RATES_URL)]);
   if (fx.result !== "success") throw new Error("FX feed returned result=" + fx.result);
   const rates = fx.rates;
@@ -117,7 +196,15 @@ function volFor(code) {
     policyAsOf: POLICY_AS_OF,
     policy: policy,
     currencies: currencies,
-    places: places
+    places: places,
+    // Measured volatility beats the coarse bands wherever history exists.
+    measured: measured ? {
+      vol: measured.vol,
+      corr: measured.corr,
+      from: measured.from,
+      to: measured.to,
+      source: "frankfurter.dev (ECB reference rates)"
+    } : null
   };
 
   const dest = path.join(__dirname, "..", "src", "data.json");

@@ -303,7 +303,8 @@
   .marker { position: absolute; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); }
   .marker.today { background: var(--ink); }
   .marker.breakeven { border-left: 2px dashed var(--ink); opacity: .5; }
-  .marker-rail { position: relative; height: 2.5rem; }
+  .marker.forward { border-left: 2px dotted var(--ink-2); opacity: .8; }
+  .marker-rail { position: relative; height: 4.6rem; }
   .flag { position: absolute; top: 0; display: flex; flex-direction: column; gap: .1rem; white-space: nowrap; }
   .flag .k {
     font-family: var(--mono); font-size: .625rem;
@@ -446,6 +447,7 @@
     <p class="verdict-head" id="verdictHead">—</p>
     <p class="verdict-sub" id="verdictSub"></p>
     <p class="verdict-swing" id="verdictSwing"></p>
+    <p class="verdict-swing" id="verdictForward"></p>
   </section>
 
   <button type="button" class="disclose" id="disclose" aria-expanded="true" aria-controls="details">
@@ -466,7 +468,12 @@
         <p class="tile-note" id="cushionNote"></p>
       </div>
       <div class="tile">
-        <p class="eyebrow">Rough odds prepaying wins</p>
+        <p class="eyebrow">What the market prices</p>
+        <p class="tile-value" id="fwdRate">—</p>
+        <p class="tile-note" id="fwdNote"></p>
+      </div>
+      <div class="tile">
+        <p class="eyebrow">Odds prepaying wins</p>
         <p class="tile-value" id="odds">—</p>
         <p class="tile-note" id="oddsNote"></p>
       </div>
@@ -482,6 +489,7 @@
         <div class="track-fill" id="trackFill"></div>
         <div class="track-legend left">Prepay wins</div>
         <div class="track-legend right">Waiting wins</div>
+        <div class="marker forward" id="mkFwd"></div>
         <div class="marker breakeven" id="mkBreak"></div>
         <div class="marker today" id="mkToday"></div>
       </div>
@@ -574,6 +582,7 @@
       <div class="note"><span class="n">03</span><p><b>Prepay discounts.</b> Many hotels shave 5–15% off for prepaid, non-refundable bookings. If yours does, that discount usually swamps everything here — put the discounted amount in and compare.</p></div>
       <div class="note"><span class="n">04</span><p><b>Point value.</b> The rewards fields assume points are worth about a cent each. Redeem for outsized value, or trigger a sign-up bonus, and prepaying is worth more than shown.</p></div>
       <div class="note"><span class="n">05</span><p><b>The odds are a model, not a forecast.</b> They assume the rate wanders randomly from today's level with no drift. Nobody knows where it lands.</p></div>
+      <div class="note"><span class="n">06</span><p><b>The forward is a price, not a prediction.</b> It is fixed by arbitrage from the two countries' interest rates, which is why it always sits between today's rate and break-even — the gap is exactly the interest the other currency earns. It tells you what the market will guarantee you today, not what will happen. Real forwards also use money-market rates rather than the policy rates here, and some currencies carry a basis this misses.</p></div>
     </section>
   </div>
 
@@ -720,14 +729,32 @@
     var p = DATA.policy[state.home];
     return p === undefined ? 3 : p;
   }
-  function defaultVol() {
-    var c = DATA.currencies[localCur()];
-    var lv = c ? c.vol : 13;
-    var hc = DATA.currencies[state.home];
-    var hv = hc ? hc.vol : 9;
-    // Same currency on both sides means no FX risk at all.
-    if (localCur() === state.home) return 0.5;
-    return Math.max(lv, hv);
+  // Volatility of the pair. Both legs are quoted against USD, so the cross-rate variance
+  // is sL² + sH² − 2·rho·sL·sH — ignoring the correlation would badly overstate the risk
+  // of, say, EUR against CHF. Falls back to the coarse band when history misses a leg.
+  function volInfo() {
+    var L = localCur(), H = state.home;
+    if (L === H) return { vol: 0.5, measured: false };
+    var m = DATA.measured;
+    if (m && m.vol[L] !== undefined && m.vol[H] !== undefined) {
+      var sL = m.vol[L], sH = m.vol[H];
+      var rho = (m.corr[L] && m.corr[L][H] !== undefined) ? m.corr[L][H] : 0;
+      var v = Math.sqrt(Math.max(0, sL * sL + sH * sH - 2 * rho * sL * sH));
+      return { vol: Math.max(0.5, v), measured: true };
+    }
+    var lc = DATA.currencies[L], hc = DATA.currencies[H];
+    return { vol: Math.max(lc ? lc.vol : 13, hc ? hc.vol : 9), measured: false };
+  }
+  function defaultVol() { return +volInfo().vol.toFixed(1); }
+
+  // Covered interest parity — the arbitrage-locked price of this pair on the payment
+  // date, which is what an FX forward or currency future actually quotes. It uses the
+  // market rate on both legs, not the user's own savings yield: those are different
+  // quantities, and only the market pair prices the forward.
+  function forwardRate(rate0, local, years) {
+    var rH = DATA.policy[state.home], rL = DATA.policy[local];
+    if (rH === undefined || rL === undefined) return null;
+    return rate0 * Math.pow(1 + rL / 100, years) / Math.pow(1 + rH / 100, years);
   }
 
   function readInputs() {
@@ -774,11 +801,14 @@
     var breakeven = prepay > 0 ? (i.amountLocal * laterFactor) / prepay : i.rate0;
     var cushion = (i.rate0 - breakeven) / i.rate0;
     var sigma = i.vol * Math.sqrt(Math.max(i.years, 1e-6));
+    var fwd = forwardRate(i.rate0, i.local, i.years);
     return {
       inputs: i, growth: growth,
       prepayCost: prepay, costLater: costLater,
       atToday: costLater(i.rate0) - prepay,
       breakeven: breakeven, cushion: cushion,
+      forward: fwd,
+      atForward: fwd ? costLater(fwd) - prepay : null,
       oddsPrepay: Phi(Math.log(breakeven / i.rate0) / sigma)
     };
   }
@@ -833,9 +863,32 @@
       ? lc + " has to strengthen more than this before prepaying pays off."
       : lc + " has to weaken more than this before waiting pays off.";
 
+    // What a forward contract or currency future would quote for the payment date.
+    if (m.forward) {
+      var fwdMove = (i.rate0 - m.forward) / i.rate0;
+      var waitAhead = -m.atForward;
+      $("fwdRate").textContent = fmtRate(m.forward);
+      $("fwdNote").textContent = "The forward rate implied by " + state.home + " and " + lc
+        + " interest rates — " + lc + (fwdMove >= 0 ? " stronger by " : " weaker by ")
+        + pct(Math.abs(fwdMove), 2) + ". Not a forecast.";
+      $("verdictForward").innerHTML =
+        "<strong>Priced in:</strong> forward contracts already quote " + lc + " at "
+        + fmtRate(m.forward) + " for that date — most of the way to break-even. Settle there and "
+        + (waitAhead > 0
+            ? "waiting is ahead by only <strong>" + home(waitAhead) + "</strong>, not " + home(Math.abs(m.atToday)) + "."
+            : "prepaying is ahead by <strong>" + home(-waitAhead) + "</strong>.")
+        + " Prepaying is a bet that " + lc + " strengthens by more than the market has already priced.";
+    } else {
+      $("fwdRate").textContent = "—";
+      $("fwdNote").textContent = "No benchmark rate for " + lc + ", so the forward can't be implied.";
+      $("verdictForward").textContent = "";
+    }
+
+    var vi = volInfo();
     $("odds").textContent = Math.round(m.oddsPrepay * 100) + "%";
-    $("oddsNote").textContent = "Random walk from today's rate at " + (i.vol * 100).toFixed(0)
-      + "% annual volatility over " + i.days + " days.";
+    $("oddsNote").textContent = "Random walk from today's rate at " + (i.vol * 100).toFixed(1)
+      + "% annual volatility over " + i.days + " days"
+      + (vi.measured ? ", measured from five years of daily rates." : ", a rough band for this pair.");
 
     $("daysHint").textContent = i.days + " days away · " + (i.years * 12).toFixed(1) + " months";
     $("amountHint").textContent = state.amountIn === "local"
@@ -865,15 +918,27 @@
     $("trackFill").style.background =
       "linear-gradient(90deg, var(--pre-fill) 0 " + bePos + "%, var(--wait-fill) " + bePos + "% 100%)";
     $("mkBreak").style.left = bePos + "%";
+    $("mkFwd").hidden = !m.forward;
+    if (m.forward) $("mkFwd").style.left = pos(m.forward) + "%";
     $("mkToday").style.left = todayPos + "%";
 
     var rail = $("rail");
     rail.innerHTML = "";
-    [{ p: todayPos, k: "Today", v: fmtRate(i.rate0), strong: true },
-     { p: bePos, k: "Break-even", v: fmtRate(m.breakeven), strong: false }].forEach(function (f) {
+    var flags = [{ p: todayPos, k: "Today", v: fmtRate(i.rate0), strong: true },
+                 { p: bePos, k: "Break-even", v: fmtRate(m.breakeven), strong: false }];
+    if (m.forward) flags.push({ p: pos(m.forward), k: "Forward", v: fmtRate(m.forward), strong: false });
+    // Left to right, so neighbouring flags don't stack in an unreadable order.
+    flags.sort(function (a, b) { return a.p - b.p; });
+    var lastRowEnd = -Infinity, row = 0;
+    flags.forEach(function (f) {
+      // Break-even and forward often sit within a couple of percent; drop the second
+      // onto a lower line rather than letting the labels overprint.
+      row = (f.p - lastRowEnd < 20) ? 1 - row : 0;
+      if (row === 0) lastRowEnd = f.p;
       var d = document.createElement("div");
       d.className = "flag";
       d.style.left = f.p + "%";
+      d.style.top = row ? "2.15rem" : "0";
       d.style.transform = f.p > 75 ? "translateX(-100%)" : (f.p < 12 ? "none" : "translateX(-50%)");
       d.innerHTML = '<span class="k">' + f.k + '</span><span class="v" style="color:' +
         (f.strong ? "var(--ink)" : "var(--ink-2)") + '">' + f.v + "</span>";
@@ -974,6 +1039,21 @@
         x: x(i.rate0), y: PAD.t - 9, "text-anchor": "middle",
         fill: "var(--ink-2)", "font-size": 11, "font-family": "var(--mono)"
       }, "today"));
+    }
+
+    if (m.forward && m.forward >= lo && m.forward <= hi) {
+      svg.appendChild(el("line", {
+        x1: x(m.forward), x2: x(m.forward), y1: PAD.t, y2: H - PAD.b,
+        stroke: "var(--ink-2)", "stroke-width": 1, "stroke-dasharray": "5 3", opacity: .6
+      }));
+      // "forward" and "today" sit within a percent or two of each other; push the
+      // forward label aside when centring them both would overprint.
+      var tight = Math.abs(x(m.forward) - x(i.rate0)) < 62;
+      svg.appendChild(el("text", {
+        x: x(m.forward) + (tight ? -7 : 0), y: PAD.t - 9,
+        "text-anchor": tight ? "end" : "middle",
+        fill: "var(--ink-2)", "font-size": 11, "font-family": "var(--mono)"
+      }, "forward"));
     }
 
     if (m.breakeven >= lo && m.breakeven <= hi) {
@@ -1081,6 +1161,11 @@
       .filter(function (p) { return Math.abs(p - bp) > 0.4; })
       .map(function (p) { return { p: p, R: i.rate0 * (1 + p / 100) }; });
     rows.push({ p: bp, R: m.breakeven, be: true });
+    if (m.forward) {
+      var fp = (m.forward - i.rate0) / i.rate0 * 100;
+      rows = rows.filter(function (r) { return r.be || Math.abs(r.p - fp) > 0.4; });
+      rows.push({ p: fp, R: m.forward, fwd: true });
+    }
     rows.sort(function (a, b) { return a.R - b.R; });
 
     var body = $("tbody");
@@ -1091,7 +1176,8 @@
       var tie = Math.abs(diff) < 0.5;
       var tr = document.createElement("tr");
       if (Math.abs(r.p) < 1e-9) tr.dataset.now = "1";
-      var word = r.be ? "break-even" : (Math.abs(r.p) < 1e-9 ? "today" : r.p < 0 ? "stronger" : "weaker");
+      var word = r.be ? "break-even" : r.fwd ? "forward"
+        : (Math.abs(r.p) < 1e-9 ? "today" : r.p < 0 ? "stronger" : "weaker");
       tr.innerHTML =
         "<td>" + fmtRate(r.R) + "</td>" +
         "<td>" + (Math.abs(r.p) < 1e-9 ? "—" : (r.p > 0 ? "+" : "−") + Math.abs(r.p).toFixed(1) + "%") +
