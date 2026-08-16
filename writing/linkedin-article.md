@@ -78,15 +78,33 @@ the gap is big enough to survive the currency's normal swing.
 
 Two models, disagreeing usefully. One built it; the other refused to be impressed by it.
 
+## Then I actually used it
+
+Which found two more things, both invisible from the code.
+
+The answer sits below the questions, so on most screens every edit scrolled the result out
+of view — change a number, scroll down, read, scroll back. Now a compact bar pins the
+current answer to the bottom of the screen while you type.
+
+The second was worse, and it was a bug the *previous fix* introduced. Having been told the
+app sounded overconfident, it had become so cautious that changing your savings rate from
+0% to 5% left the headline reading "financially near break-even" the whole way. The
+numbers underneath were all moving. The one line anybody reads wasn't.
+
+So the headline now always names whoever's ahead, and what varies is how sure it sounds:
+*slightly ahead* for a lean, *the better bet* once the gap outgrows what the currency
+normally does. Honesty was never the problem. Refusing to answer was.
+
 ## The part worth noticing
 
 The input was a conversation, not a specification. Nobody sat down to describe software. A
-friend explained a problem clearly, then said honestly that the first attempt was too
-complicated — and that was enough.
+friend explained a problem clearly, said honestly that the first attempt was too
+complicated, a rival model called the framing simplistic, and using it myself turned up
+what neither had seen.
 
-The scarce thing here was never the prompting. It was noticing that a decision most people
-make badly could be made well, and then saying the most useful sentence in the whole
-exchange: *a little complicated for most people.*
+None of that was prompting. Every improvement came from someone saying plainly what was
+wrong with what they were looking at — and the most useful sentence in the whole exchange
+was still the first one: *a little complicated for most people.*
 
 Try it: **jimzucker.github.io/exchange-rates**
 
