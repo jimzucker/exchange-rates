@@ -141,10 +141,18 @@ A single "waiting wins by $57" implies confidence the numbers don't support. $57
 trivial beside what the currency can do in a month, beside cancellation flexibility, or
 beside a small prepaid discount.
 
-So the app names a winner only when the gap survives the currency's own swing — when the
-odds fall outside 40–60%, and the gap clears roughly an eighth of the 10th–90th
-percentile spread of outcomes. Otherwise the headline reads **"Financially near
-break-even"** and points at flexibility, because that is what actually decides it there.
+So the headline has three states rather than two. It always names whoever is ahead —
+otherwise changing an input appears to do nothing, which is how the first attempt at this
+failed — but how confident it sounds varies:
+
+| State | When | Reads |
+|---|---|---|
+| Dead heat | gap under 0.5% of the bill, or odds within 45–55% | *Financially near break-even* |
+| Lean | ahead, but under a quarter of the 10th–90th spread | *Waiting is slightly ahead* |
+| Clear | ahead by more than that | *Waiting is the better bet* |
+
+The lean state says so in as many words: "the currency routinely moves more than that, so
+treat it as a lean rather than a verdict."
 
 The answer always shows the spread alongside the point estimate: for the default Japan
 case, waiting has historically landed anywhere between $2,489 and $3,001 against a fixed
