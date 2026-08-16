@@ -23,12 +23,10 @@ buried in the last sentence.
 The first thing it did was not write code. It went after the 2.5% — derived the formula
 behind the claim and checked whether my friend was right.
 
-They were. Put both options in the same units, and when card rewards match on both sides,
-everything cancels except the interest you give up by paying early. Over the months to the
-trip, that came to 2.5%. Exactly the number they'd reasoned to in their head.
-
-Then it built the calculator: enter the trip, get the answer, plus the exact rate move
-that would flip it.
+They were. Put both options in the same units and, when card rewards match, everything
+cancels except the interest you give up by paying early. Over the months to the trip, that
+came to 2.5%. Exactly the number they'd reasoned to in their head. Then it built the
+calculator around it.
 
 ## Then I pasted the second text
 
@@ -51,30 +49,23 @@ I never translated either message into requirements. Both times the raw text was
 ## The one thing it argued with
 
 My friend asked it to look up interest rates automatically too. It declined, and it was
-right. There's no free feed for savings rates — only for central bank policy rates, and a
-policy rate isn't what your account pays. Yours might pay 4%, or 0.01%. Automating that
-would have produced a number that looked authoritative and was quietly wrong for most
-people. It shipped an editable field with a nudge instead.
+right. There's no free feed for savings rates — only for central bank policy rates, which
+aren't what your account pays. Yours might pay 4%, or 0.01%. Automating that would have
+produced a number that looked authoritative and was quietly wrong for most people.
 
 ## Then I had a different AI review it
 
-I pasted the finished app into ChatGPT and asked what was wrong with it. It found a real
-flaw, and not a cosmetic one.
+I pasted the app into ChatGPT and asked what was wrong with it. It found something real.
 
-The app compared two identical prices, so the only thing that could separate them was
-interest and card points — which made it, in its words, "an interest calculator with
-exchange-rate sensitivity attached." Meanwhile the factors that usually decide this in
-real life weren't in the maths at all: prepaid bookings are typically *discounted*, and
-they're usually non-refundable.
+The app compared two identical prices, so the only things that could separate them were
+interest and card points — making it, in its words, "an interest calculator with
+exchange-rate sensitivity attached." The factors that usually decide this in real life
+weren't in the maths at all: prepaid bookings are typically *discounted*, and usually
+non-refundable.
 
 It was right. The app now takes both prices separately and asks how likely your plans are
 to change, pricing a cancellation as an expected loss. A 10% prepaid discount — routine at
-hotels — moves the answer further than every interest calculation in the app combined.
-
-The headline changed too. "Waiting wins by $57" sounds like a finding; it isn't. Against
-the range the yen has actually covered over comparable stretches, $57 is noise. So the app
-now says **"Financially near break-even"** and tells you to decide on flexibility, unless
-the gap is big enough to survive the currency's normal swing.
+hotels — moves the answer further than every interest calculation in it combined.
 
 Two models, disagreeing usefully. One built it; the other refused to be impressed by it.
 
@@ -82,14 +73,13 @@ Two models, disagreeing usefully. One built it; the other refused to be impresse
 
 Which found two more things, both invisible from the code.
 
-The answer sits below the questions, so on most screens every edit scrolled the result out
-of view — change a number, scroll down, read, scroll back. Now a compact bar pins the
-current answer to the bottom of the screen while you type.
+The answer sits below the questions, so every edit scrolled the result out of view. Now a
+compact bar pins it to the bottom of the screen while you type.
 
-The second was worse, and it was a bug the *previous fix* introduced. Having been told the
-app sounded overconfident, it had become so cautious that changing your savings rate from
-0% to 5% left the headline reading "financially near break-even" the whole way. The
-numbers underneath were all moving. The one line anybody reads wasn't.
+The second was worse, and the *previous fix* had caused it. Told that it sounded
+overconfident, the app had become so cautious that changing your savings rate from 0% to
+5% left the headline reading "financially near break-even" the whole way. The numbers
+underneath were all moving. The one line anybody reads wasn't.
 
 So the headline now always names whoever's ahead, and what varies is how sure it sounds:
 *slightly ahead* for a lean, *the better bet* once the gap outgrows what the currency

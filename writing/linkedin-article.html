@@ -53,8 +53,7 @@
 <p>That's it. A chat message about a hotel booking, reasoning half-finished, the actual ask buried in the last sentence.</p>
 <h2>What it did with that</h2>
 <p>The first thing it did was not write code. It went after the 2.5% — derived the formula behind the claim and checked whether my friend was right.</p>
-<p>They were. Put both options in the same units, and when card rewards match on both sides, everything cancels except the interest you give up by paying early. Over the months to the trip, that came to 2.5%. Exactly the number they'd reasoned to in their head.</p>
-<p>Then it built the calculator: enter the trip, get the answer, plus the exact rate move that would flip it.</p>
+<p>They were. Put both options in the same units and, when card rewards match, everything cancels except the interest you give up by paying early. Over the months to the trip, that came to 2.5%. Exactly the number they'd reasoned to in their head. Then it built the calculator around it.</p>
 <h2>Then I pasted the second text</h2>
 <p>My friend looked at version one and sent this back:</p>
 <blockquote>"I think people would find this useful because they're not knowledgeable enough to know what variables to think about... If the app could do all countries and look up the exchange rates itself it would make it easier. Very cool analysis. A little complicated for most people. But I think a lot of people don't even think about these types of things."</blockquote>
@@ -62,17 +61,16 @@
 <p>That message — a compliment with a complaint inside it — is what collapsed a ten-field form into a handful of questions, put a plain-language explanation of the trade-off above them, and turned one hardcoded currency into 245 destinations pulling live rates.</p>
 <p>I never translated either message into requirements. Both times the raw text was the input.</p>
 <h2>The one thing it argued with</h2>
-<p>My friend asked it to look up interest rates automatically too. It declined, and it was right. There's no free feed for savings rates — only for central bank policy rates, and a policy rate isn't what your account pays. Yours might pay 4%, or 0.01%. Automating that would have produced a number that looked authoritative and was quietly wrong for most people. It shipped an editable field with a nudge instead.</p>
+<p>My friend asked it to look up interest rates automatically too. It declined, and it was right. There's no free feed for savings rates — only for central bank policy rates, which aren't what your account pays. Yours might pay 4%, or 0.01%. Automating that would have produced a number that looked authoritative and was quietly wrong for most people.</p>
 <h2>Then I had a different AI review it</h2>
-<p>I pasted the finished app into ChatGPT and asked what was wrong with it. It found a real flaw, and not a cosmetic one.</p>
-<p>The app compared two identical prices, so the only thing that could separate them was interest and card points — which made it, in its words, "an interest calculator with exchange-rate sensitivity attached." Meanwhile the factors that usually decide this in real life weren't in the maths at all: prepaid bookings are typically <em>discounted</em>, and they're usually non-refundable.</p>
-<p>It was right. The app now takes both prices separately and asks how likely your plans are to change, pricing a cancellation as an expected loss. A 10% prepaid discount — routine at hotels — moves the answer further than every interest calculation in the app combined.</p>
-<p>The headline changed too. "Waiting wins by $57" sounds like a finding; it isn't. Against the range the yen has actually covered over comparable stretches, $57 is noise. So the app now says <strong>"Financially near break-even"</strong> and tells you to decide on flexibility, unless the gap is big enough to survive the currency's normal swing.</p>
+<p>I pasted the app into ChatGPT and asked what was wrong with it. It found something real.</p>
+<p>The app compared two identical prices, so the only things that could separate them were interest and card points — making it, in its words, "an interest calculator with exchange-rate sensitivity attached." The factors that usually decide this in real life weren't in the maths at all: prepaid bookings are typically <em>discounted</em>, and usually non-refundable.</p>
+<p>It was right. The app now takes both prices separately and asks how likely your plans are to change, pricing a cancellation as an expected loss. A 10% prepaid discount — routine at hotels — moves the answer further than every interest calculation in it combined.</p>
 <p>Two models, disagreeing usefully. One built it; the other refused to be impressed by it.</p>
 <h2>Then I actually used it</h2>
 <p>Which found two more things, both invisible from the code.</p>
-<p>The answer sits below the questions, so on most screens every edit scrolled the result out of view — change a number, scroll down, read, scroll back. Now a compact bar pins the current answer to the bottom of the screen while you type.</p>
-<p>The second was worse, and it was a bug the <em>previous fix</em> introduced. Having been told the app sounded overconfident, it had become so cautious that changing your savings rate from 0% to 5% left the headline reading "financially near break-even" the whole way. The numbers underneath were all moving. The one line anybody reads wasn't.</p>
+<p>The answer sits below the questions, so every edit scrolled the result out of view. Now a compact bar pins it to the bottom of the screen while you type.</p>
+<p>The second was worse, and the <em>previous fix</em> had caused it. Told that it sounded overconfident, the app had become so cautious that changing your savings rate from 0% to 5% left the headline reading "financially near break-even" the whole way. The numbers underneath were all moving. The one line anybody reads wasn't.</p>
 <p>So the headline now always names whoever's ahead, and what varies is how sure it sounds: <em>slightly ahead</em> for a lean, <em>the better bet</em> once the gap outgrows what the currency normally does. Honesty was never the problem. Refusing to answer was.</p>
 <h2>The part worth noticing</h2>
 <p>The input was a conversation, not a specification. Nobody sat down to describe software. A friend explained a problem clearly, said honestly that the first attempt was too complicated, a rival model called the framing simplistic, and using it myself turned up what neither had seen.</p>
