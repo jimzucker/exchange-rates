@@ -5,10 +5,25 @@ can be checked against the thing they describe.
 
 | File | What it is |
 |---|---|
-| `linkedin-article.md` | The LinkedIn article — paste-ready |
+| `linkedin-article.md` | The LinkedIn article — paste-ready, and the source of the two files below |
+| `linkedin-article.pdf` | Print-ready PDF, 4 pages, cover image included. Generated |
+| `linkedin-article.html` | Intermediate print page. Generated |
 | `linkedin-hero.png` | Cover image, 3840×2160 (16:9 at 2×) |
 | `linkedin-product.png` | Screenshot of the live site, same dimensions |
 | `hero.html` | Source of the cover image |
+
+## Making the PDF
+
+```sh
+node scripts/article-pdf.js
+```
+
+Converts the Markdown to a print-styled page and drives Chrome's print engine. Edit
+`linkedin-article.md` and re-run — never edit the `.html` or `.pdf`, they are outputs.
+
+The converter in `scripts/article-pdf.js` handles only the Markdown this article uses:
+headings, paragraphs, blockquotes, bold, italic, escaped asterisks, and bare URLs. If
+the article grows a table or a list, teach it that first.
 
 ## Regenerating the cover
 
