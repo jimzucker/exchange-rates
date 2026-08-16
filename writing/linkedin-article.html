@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>A friend asked me a question about yen. Two messages later, it was a live app.</title>
+<title>I pasted a friend's text message into Claude Code. It came back a working app.</title>
 <style>
   @page { size: letter; margin: 0.85in 0.9in; }
   :root {
@@ -45,36 +45,29 @@
 <body>
 <p class="byline">Prepay or Wait &nbsp;·&nbsp; build notes</p>
 <img class="cover" src="linkedin-hero.png" alt="">
-<h1>A friend asked me a question about yen. Two messages later, it was a live app.</h1>
-<p>A friend messaged me last week with a travel problem. They're going to Japan in March, the yen is unusually cheap right now, and the hotel is offering a choice: prepay on the credit card today, or pay on arrival.</p>
-<p>Prepaying earns card points now and locks in today's rate. Waiting keeps the money earning interest for seven more months. In between sits the thing neither option controls — the yen could move either way.</p>
-<p>They'd already worked out the crux: the rate would have to move more than about 2.5% before prepaying became the wrong call.</p>
-<p>Then came the line that turned a chat message into a product:</p>
-<blockquote>"It would be better if I could just go on an app, put in a couple things, and it would determine everything for me."</blockquote>
-<p>So I handed the message to Claude Code and watched.</p>
-<h2>The question was already the hard part</h2>
-<p>The first thing it did was not write code. It derived the formula behind that 2.5% and checked whether the number held.</p>
-<p>It did. Put both options in the same units — dollars as of the day you'd otherwise pay — and when card rewards match on both sides, everything cancels except the interest you forgo. Over 212 days that came to 2.5%. Exactly what they'd reasoned to without writing anything down.</p>
-<p>I wasn't asking a machine to solve a problem nobody understood. I was asking it to formalize one a smart non-expert had already half solved. Those are very different tasks, and the second one goes fast.</p>
-<h2>The second message was a product spec in disguise</h2>
-<p>The follow-up read like a compliment:</p>
-<blockquote>"I think people would find this useful because they're not knowledgeable enough to know what variables to think about... A little complicated for most people. But I think a lot of people don't even think about these types of things."</blockquote>
-<p>Read it again. That is a product brief.</p>
-<p>"A little complicated" killed the ten-field form. What's left on the surface is four questions: where, how much, when, and what your cash earns.</p>
-<p>"They don't know what variables to think about" put three cards above the questions, naming the trade-off before asking anything. Prepaying gives you points today. Prepaying costs you interest. Either way, the rate moves.</p>
-<p>"Do all countries" turned one hardcoded currency into 245 destinations with live rates.</p>
-<p>That wasn't a feature request. It was a description of who the user is and what they don't know.</p>
-<h2>The most useful thing it did was refuse</h2>
-<p>I also asked it to look up interest rates automatically. It declined, and it was right.</p>
-<p>There's no free feed for savings rates. There <em>is</em> one for central bank policy rates — but a policy rate isn't what your account pays. Yours might pay 4%, or 0.01%. Automating that would have produced a number that looked authoritative and was quietly wrong for most people.</p>
-<p>What shipped instead is an editable field with a nudge: if your cash is in checking earning nothing, enter zero.</p>
-<p>An assistant that had just done what it was told would have built the worse thing.</p>
-<p>The unglamorous half was verification. Rendering the page in a headless browser across screen widths and both color themes caught six bugs before anyone saw it — including one that only appears if your home currency is the yen. Nobody would have filed that. They'd have quietly stopped trusting the tool.</p>
-<h2>The part I keep thinking about</h2>
-<p>There were more than two messages. But everything after the first two was me typing "go" and "commit it." Every decision that shaped what this <em>is</em> came from two messages written by someone who wasn't trying to specify software.</p>
-<p>The scarce skill was never prompting. It was that a friend noticed a decision most people make badly, thought about it carefully enough to land within a rounding error of the right answer, and then said the most useful sentence in the exchange: <em>a little complicated for most people.</em></p>
+<h1>I pasted a friend's text message into Claude Code. It came back a working app.</h1>
+<p>A friend texted me a question last week. I didn't write a spec. I didn't turn it into requirements or a ticket. I pasted their message in as it arrived and hit enter.</p>
+<p>What came back is a live web app that now covers 245 countries.</p>
+<p>Here is the entire input:</p>
+<blockquote>"Since you're Mr. App Development, I have a good one for you to consider. We're going to Japan in March and currently the exchange rates are very favorable to the yen. So I have an option of prepaying now on my credit card which will give me credit card points but I will lose the interest that I would get on my money until March... I determined that the exchange rate would have to move more than 2 and 1/2% for me to be damaged by it as opposed to prepay. It would be better if I could just go on an app, put in a couple things and it would determine everything for me."</blockquote>
+<p>That's it. A chat message about a hotel booking, reasoning half-finished, the actual ask buried in the last sentence.</p>
+<h2>What it did with that</h2>
+<p>The first thing it did was not write code. It went after the 2.5% — derived the formula behind the claim and checked whether my friend was right.</p>
+<p>They were. Put both options in the same units, and when card rewards match on both sides, everything cancels except the interest you give up by paying early. Over the months to the trip, that came to 2.5%. Exactly the number they'd reasoned to in their head.</p>
+<p>Then it built the calculator: enter the trip, get the answer, plus the exact rate move that would flip it.</p>
+<h2>Then I pasted the second text</h2>
+<p>My friend looked at version one and sent this back:</p>
+<blockquote>"I think people would find this useful because they're not knowledgeable enough to know what variables to think about... If the app could do all countries and look up the exchange rates itself it would make it easier. Very cool analysis. A little complicated for most people. But I think a lot of people don't even think about these types of things."</blockquote>
+<p>I pasted that in too.</p>
+<p>That message — a compliment with a complaint inside it — is what collapsed a ten-field form into four questions, put a plain-language explanation of the trade-off above them, and turned one hardcoded currency into 245 destinations pulling live rates.</p>
+<p>I never translated either message into requirements. Both times the raw text was the input.</p>
+<h2>The one thing it argued with</h2>
+<p>My friend asked it to look up interest rates automatically too. It declined, and it was right. There's no free feed for savings rates — only for central bank policy rates, and a policy rate isn't what your account pays. Yours might pay 4%, or 0.01%. Automating that would have produced a number that looked authoritative and was quietly wrong for most people. It shipped an editable field with a nudge instead.</p>
+<h2>The part worth noticing</h2>
+<p>The input was a conversation, not a specification. Nobody sat down to describe software. A friend explained a problem clearly, then said honestly that the first attempt was too complicated — and that was enough.</p>
+<p>The scarce thing here was never the prompting. It was noticing that a decision most people make badly could be made well, and then saying the most useful sentence in the whole exchange: <em>a little complicated for most people.</em></p>
 <p>Try it: <strong><a href="https://jimzucker.github.io/exchange-rates">jimzucker.github.io/exchange-rates</a></strong></p>
 <p>Source: <strong><a href="https://github.com/jimzucker/exchange-rates">github.com/jimzucker/exchange-rates</a></strong></p>
-<p>It's a calculator, not financial advice — and it's honest about what it can't price. A hotel shaving 10% off for prepaying swamps a 2% interest cushion entirely. Which is the other thing a good question does. It tells you where the math stops.</p>
+<p>It's a calculator, not financial advice — and it's honest about what it can't price. A hotel shaving 10% off for prepaying swamps a 2% interest cushion entirely.</p>
 </body>
 </html>
