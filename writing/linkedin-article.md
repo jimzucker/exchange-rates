@@ -43,11 +43,10 @@ My friend looked at version one and sent this back:
 I pasted that in too.
 
 That message — a compliment with a complaint inside it — is what collapsed a ten-field
-form into four questions, put a plain-language explanation of the trade-off above them,
-and turned one hardcoded currency into 245 destinations pulling live rates.
+form into a handful of questions, put a plain-language explanation of the trade-off above
+them, and turned one hardcoded currency into 245 destinations pulling live rates.
 
-I never translated either message into requirements. Both times the raw text was the
-input.
+I never translated either message into requirements. Both times the raw text was the input.
 
 ## The one thing it argued with
 
@@ -57,10 +56,32 @@ policy rate isn't what your account pays. Yours might pay 4%, or 0.01%. Automati
 would have produced a number that looked authoritative and was quietly wrong for most
 people. It shipped an editable field with a nudge instead.
 
+## Then I had a different AI review it
+
+I pasted the finished app into ChatGPT and asked what was wrong with it. It found a real
+flaw, and not a cosmetic one.
+
+The app compared two identical prices, so the only thing that could separate them was
+interest and card points — which made it, in its words, "an interest calculator with
+exchange-rate sensitivity attached." Meanwhile the factors that usually decide this in
+real life weren't in the maths at all: prepaid bookings are typically *discounted*, and
+they're usually non-refundable.
+
+It was right. The app now takes both prices separately and asks how likely your plans are
+to change, pricing a cancellation as an expected loss. A 10% prepaid discount — routine at
+hotels — moves the answer further than every interest calculation in the app combined.
+
+The headline changed too. "Waiting wins by $57" sounds like a finding; it isn't. Against
+the range the yen has actually covered over comparable stretches, $57 is noise. So the app
+now says **"Financially near break-even"** and tells you to decide on flexibility, unless
+the gap is big enough to survive the currency's normal swing.
+
+Two models, disagreeing usefully. One built it; the other refused to be impressed by it.
+
 ## The part worth noticing
 
-The input was a conversation, not a specification. Nobody sat down to describe software.
-A friend explained a problem clearly, then said honestly that the first attempt was too
+The input was a conversation, not a specification. Nobody sat down to describe software. A
+friend explained a problem clearly, then said honestly that the first attempt was too
 complicated — and that was enough.
 
 The scarce thing here was never the prompting. It was noticing that a decision most people
@@ -71,5 +92,5 @@ Try it: **jimzucker.github.io/exchange-rates**
 
 Source: **github.com/jimzucker/exchange-rates**
 
-It's a calculator, not financial advice — and it's honest about what it can't price. A
-hotel shaving 10% off for prepaying swamps a 2% interest cushion entirely.
+It's a calculator, not financial advice — and it's honest about what it still can't price:
+how much you value simply being able to change your mind.
