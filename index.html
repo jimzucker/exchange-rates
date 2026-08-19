@@ -191,7 +191,7 @@
   .seg {
     display: inline-flex;
     background: var(--surface-2);
-    border: 1px solid var(--hairline);
+    border: 1px solid var(--rule);
     border-radius: 8px;
     padding: 2px;
     gap: 2px;
@@ -200,14 +200,41 @@
   .seg button {
     font-family: var(--mono);
     font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .02em;
     border: 0;
     background: transparent;
     color: var(--muted);
-    padding: 0 .55rem;
+    padding: 0 .6rem;
     border-radius: 6px;
     cursor: pointer;
+    transition: background .12s, color .12s;
   }
-  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.10); }
+  .seg button:hover { background: var(--hairline); color: var(--ink-2); }
+  /* The selected swatch used to be --surface on a --surface-2 track, which in dark
+     mode is a two-step difference nobody can see; a stray focus ring then read as
+     the selection. Inverting it is unmistakable in both themes, and stays neutral —
+     blue and red already mean prepay and wait everywhere else on the page. */
+  .seg button[aria-pressed="true"],
+  .seg button[aria-pressed="true"]:hover { background: var(--ink); color: var(--page); }
+  .seg button:focus-visible { outline-offset: -1px; }
+
+  /* Mirrors the toggle on the prepay field so it is obvious both prices are in the
+     same currency — the toggle sits beside the first one and used to look local to it. */
+  .unit-tag {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: .75rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 0 .6rem;
+    flex: 0 0 auto;
+  }
 
   .ratebar {
     display: flex;
@@ -482,7 +509,10 @@
       </div>
       <div class="field">
         <label for="amountPre">Price if you prepay</label>
-        <input id="amountPre" type="text" inputmode="decimal" autocomplete="off" value="450000">
+        <div class="amount-row">
+          <input id="amountPre" type="text" inputmode="decimal" autocomplete="off" value="450000">
+          <span class="unit-tag" id="curPre" aria-hidden="true">JPY</span>
+        </div>
         <span class="hint" id="amountPreHint"></span>
       </div>
       <div class="field">
@@ -1471,9 +1501,19 @@
     $("apyHint").textContent = state.apyTouched
       ? "Your number — 0 if it just sits in checking"
       : "Typical for " + state.home + " — put in what your account pays, or 0 if none";
+    syncUnits(state.amountIn);
+    els.amount.step = localCur() === "JPY" || localCur() === "KRW" || localCur() === "IDR" ? "1000" : "10";
+  }
+
+  // Both price fields are always in the same currency, so the toggle drives the
+  // prepay field's label too.
+  function syncUnits(which) {
+    var code = which === "home" ? state.home : localCur();
     $("curLocal").textContent = localCur();
     $("curHome").textContent = state.home;
-    els.amount.step = localCur() === "JPY" || localCur() === "KRW" || localCur() === "IDR" ? "1000" : "10";
+    $("curLocal").setAttribute("aria-pressed", String(which !== "home"));
+    $("curHome").setAttribute("aria-pressed", String(which === "home"));
+    $("curPre").textContent = code;
   }
 
   function setAmountIn(which) {
@@ -1483,8 +1523,7 @@
     setAmount(conv(Math.max(0, num(els.amount, 0))));
     setAmountPre(conv(Math.max(0, num(els.amountPre, 0))));
     state.amountIn = which;
-    $("curLocal").setAttribute("aria-pressed", String(which === "local"));
-    $("curHome").setAttribute("aria-pressed", String(which === "home"));
+    syncUnits(which);
     update();
   }
 
@@ -1543,8 +1582,6 @@
     var a = Math.round(2800 * R / 100) * 100; // a ~2,800-unit trip, rounded
     setAmount(a);
     setAmountPre(a);                          // same price until told otherwise
-    $("curLocal").setAttribute("aria-pressed", "true");
-    $("curHome").setAttribute("aria-pressed", "false");
   }
 
   /* ---------- init ---------- */
@@ -1555,16 +1592,14 @@
   if (load()) {
     els.dest.value = state.dest;
     els.home.value = state.home;
-    $("curLocal").setAttribute("aria-pressed", String(state.amountIn === "local"));
-    $("curHome").setAttribute("aria-pressed", String(state.amountIn === "home"));
+    syncUnits(state.amountIn);
     syncDefaults();
   }
 
   els.dest.addEventListener("change", function () {
     state.dest = els.dest.value;
     state.amountIn = "local";
-    $("curLocal").setAttribute("aria-pressed", "true");
-    $("curHome").setAttribute("aria-pressed", "false");
+    syncUnits("local");
     state.rateTouched = false;
     syncRate(); syncDefaults(); update();
   });
